@@ -15,7 +15,7 @@ namespace RadioDataApp.Services
         public event EventHandler<byte[]>? AudioDataReceived;
         public event EventHandler? TransmissionCompleted;
 
-        public List<WaveInCapabilities> GetInputDevices()
+        public static List<WaveInCapabilities> GetInputDevices()
         {
             var devices = new List<WaveInCapabilities>();
             for (int i = 0; i < WaveIn.DeviceCount; i++)
@@ -25,7 +25,7 @@ namespace RadioDataApp.Services
             return devices;
         }
 
-        public List<WaveOutCapabilities> GetOutputDevices()
+        public static List<WaveOutCapabilities> GetOutputDevices()
         {
             var devices = new List<WaveOutCapabilities>();
             for (int i = 0; i < WaveOut.DeviceCount; i++)
@@ -90,10 +90,7 @@ namespace RadioDataApp.Services
 
         public void QueueAudio(byte[] audioData)
         {
-            if (_bufferedWaveProvider != null)
-            {
-                _bufferedWaveProvider.AddSamples(audioData, 0, audioData.Length);
-            }
+            _bufferedWaveProvider?.AddSamples(audioData, 0, audioData.Length);
         }
 
         public TimeSpan GetBufferedDuration()
@@ -134,6 +131,7 @@ namespace RadioDataApp.Services
         {
             StopListening();
             StopTransmission();
+            GC.SuppressFinalize(this);
         }
     }
 }

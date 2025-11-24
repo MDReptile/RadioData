@@ -7,14 +7,15 @@
         xmlns:local="clr-namespace:RadioDataApp"
         xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
         mc:Ignorable="d"
-        Title="RadioData Terminal" Height="850" Width="800"
+        Title="RadioData Terminal" Height="900" Width="800"
         TextElement.Foreground="#4CAF50"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Auto"
         Background="#1E1E1E"
-        FontFamily="Consolas">
+        FontFamily="Consolas"
+        Icon="icon.png">
 
     <Window.Resources>
         <local:OpacityMultiplierConverter x:Key="OpacityMultiplierConverter"/>
@@ -25,6 +26,9 @@
         <SolidColorBrush x:Key="PrimaryHueMidBrush" Color="#4CAF50"/>
         <SolidColorBrush x:Key="PrimaryHueMidForegroundBrush" Color="#1E1E1E"/>
         <SolidColorBrush x:Key="MaterialDesignBody" Color="#4CAF50"/>
+        
+        <!-- Material Design resource to suppress warning -->
+        <SolidColorBrush x:Key="MaterialDesign.Brush.ComboBox.Border" Color="#4CAF50"/>
         
         <Style TargetType="GroupBox" BasedOn="{StaticResource MaterialDesignCardGroupBox}">
             <Setter Property="BorderBrush" Value="{StaticResource TerminalGreen}"/>
@@ -106,7 +110,7 @@
         <vm:MainViewModel />
     </Window.DataContext>
 
-    <Grid Margin="0,0,0,-16">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -249,7 +253,7 @@
                 </GroupBox>
 
                 <!-- File Transfer Status -->
-                <GroupBox Header="TRANSFER STATUS" Margin="0,0,0,10" Height="154">
+                <GroupBox Header="TRANSFER STATUS" Margin="0,0,0,10" Height="120">
                     <StackPanel Margin="10">
                         <TextBlock Text="Progress:" Margin="0,0,0,5"/>
                         <ProgressBar Value="{Binding TransferProgress}" Maximum="100" Height="15" />
@@ -268,7 +272,7 @@
                 </GroupBox>
 
                 <!-- Debug Log -->
-                <GroupBox Header="SYSTEM LOG" Height="140">
+                <GroupBox Header="SYSTEM LOG" Height="150">
                     <ScrollViewer>
                         <TextBlock Text="{Binding DebugLog}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
                     </ScrollViewer>

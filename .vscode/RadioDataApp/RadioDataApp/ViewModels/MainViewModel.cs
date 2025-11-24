@@ -144,11 +144,11 @@ namespace RadioDataApp.ViewModels
 
         private void LoadDevices()
         {
-            var inputs = _audioService.GetInputDevices();
+            var inputs = AudioService.GetInputDevices();
             for (int i = 0; i < inputs.Count; i++)
                 InputDevices.Add($"{i}: {inputs[i].ProductName}");
 
-            var outputs = _audioService.GetOutputDevices();
+            var outputs = AudioService.GetOutputDevices();
             for (int i = 0; i < outputs.Count; i++)
                 OutputDevices.Add($"{i}: {outputs[i].ProductName}");
 
