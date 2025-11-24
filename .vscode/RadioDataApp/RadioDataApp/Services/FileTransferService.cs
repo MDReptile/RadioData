@@ -137,15 +137,20 @@ namespace RadioDataApp.Services
 
         private void FinishReception()
         {
+            Console.WriteLine($"[FileTransfer] FinishReception called. Chunks received: {_receivedChunkIds.Count}/{_expectedChunks}");
             _isReceivingFile = false;
 
             string receiveDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReceivedFiles");
+            Console.WriteLine($"[FileTransfer] Target directory: {receiveDir}");
+
             if (!Directory.Exists(receiveDir))
             {
                 Directory.CreateDirectory(receiveDir);
+                Console.WriteLine($"[FileTransfer] Created directory: {receiveDir}");
             }
 
             string savePath = Path.Combine(receiveDir, _currentFileName);
+            Console.WriteLine($"[FileTransfer] Initial save path: {savePath}");
 
             // Ensure unique name
             int counter = 1;
@@ -156,13 +161,24 @@ namespace RadioDataApp.Services
             {
                 savePath = Path.Combine(receiveDir, $"{fileNameWithoutExt}_{counter++}{ext}");
             }
+            Console.WriteLine($"[FileTransfer] Final save path: {savePath}");
 
-            File.WriteAllBytes(savePath, _fileBuffer);
-            Console.WriteLine($"[FileTransfer] Saved to {savePath}");
+            try
+            {
+                File.WriteAllBytes(savePath, _fileBuffer);
+                Console.WriteLine($"[FileTransfer] Successfully wrote {_fileBuffer.Length} bytes to {savePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[FileTransfer] ERROR writing file: {ex.Message}");
+                DebugMessage?.Invoke(this, $"ERROR: Failed to save file - {ex.Message}");
+                return;
+            }
 
             // Decompression Logic
             if (Path.GetExtension(savePath).ToLower() == ".cimg")
             {
+                Console.WriteLine($"[FileTransfer] Detected .cimg file, attempting decompression...");
                 try
                 {
                     string decompressedPath = Path.ChangeExtension(savePath, ".png");
@@ -182,6 +198,7 @@ namespace RadioDataApp.Services
 
                     // Optional: Delete the compressed file
                     File.Delete(savePath);
+                    Console.WriteLine($"[FileTransfer] Deleted temporary .cimg file");
                 }
                 catch (Exception ex)
                 {
@@ -191,10 +208,12 @@ namespace RadioDataApp.Services
             }
             else
             {
+                Console.WriteLine($"[FileTransfer] Regular file, invoking FileReceived event");
                 FileReceived?.Invoke(this, savePath);
             }
 
             ProgressChanged?.Invoke(this, 1.0);
+            Console.WriteLine($"[FileTransfer] FinishReception completed successfully");
         }
     }
 }
