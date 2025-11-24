@@ -314,7 +314,9 @@ namespace RadioDataApp.ViewModels
             // Start visualization
             StartVisualization(audioSamples);
 
-            _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
+            // Adjust device index for loopback offset (index 0 = loopback, 1+ = real devices)
+            int deviceIndex = _audioService.IsLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+            _audioService.StartTransmitting(deviceIndex, audioSamples);
 
             MessageToSend = string.Empty; // Clear input
         }
@@ -457,8 +459,9 @@ namespace RadioDataApp.ViewModels
                     var packets = _fileTransferService.PrepareFileForTransmission(filePath);
                     int total = packets.Count;
 
-                    // 1. Initialize continuous transmission
-                    _audioService.InitializeTransmission(SelectedOutputDeviceIndex);
+                    // 1. Initialize continuous transmission (adjust device index for loopback offset)
+                    int deviceIndex = _audioService.IsLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+                    _audioService.InitializeTransmission(deviceIndex);
 
                     for (int i = 0; i < total; i++)
                     {
