@@ -210,10 +210,10 @@ namespace RadioDataApp.ViewModels
                 var fileInfo = new System.IO.FileInfo(dialog.FileName);
                 long fileSizeBytes = fileInfo.Length;
 
-                // Calculate accurate time estimate accounting for all overhead
+                // Calculate accurate time estimate for 500 baud (half speed = double time)
                 int packetCount = (int)Math.Ceiling(fileSizeBytes / 200.0);
-                double firstPacketTime = 3.4;  // 1s preamble + ~2s data + 0.3s postamble + 0.1s delay
-                double otherPacketTime = 2.4;  // ~2s data + 0.3s postamble + 0.1s delay
+                double firstPacketTime = 6.8;  // ~2s preamble + ~4s data + 0.6s postamble + 0.2s delay
+                double otherPacketTime = 4.8;  // ~4s data + 0.6s postamble + 0.2s delay
                 double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
                 if (fileSizeBytes > 1024)
