@@ -193,6 +193,18 @@
                 <!-- Transmission Controls -->
                 <GroupBox Header="TRANSMISSION CONTROLS" Margin="0,0,0,10">
                     <StackPanel Margin="10">
+                        <TextBox Text="{Binding EncryptionKey, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="64"
+                                 materialDesign:HintAssist.Hint="Encryption Key (1-64 chars)"
+                                 materialDesign:HintAssist.Background="#252526"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                 Foreground="{StaticResource TerminalGreen}"
+                                 CaretBrush="{StaticResource TerminalGreen}"
+                                 materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
+                                 materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                 BorderBrush="{StaticResource TerminalGreen}"
+                                 Margin="0,0,0,10"/>
+                        
                         <TextBox Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
                                  MaxLength="120"
                                  materialDesign:HintAssist.Hint="Enter message..."

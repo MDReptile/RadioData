@@ -21,6 +21,7 @@ namespace RadioDataApp.ViewModels
         private readonly AfskModem _modem;
         private readonly FileTransferService _fileTransferService;
         private readonly ImageCompressionService _imageCompressionService;
+        private readonly SettingsService _settingsService;
 
         [ObservableProperty]
         private string _statusMessage = "Ready";
@@ -78,6 +79,30 @@ namespace RadioDataApp.ViewModels
         private string _messageToSend = "Hello World";
 
         [ObservableProperty]
+        private string _encryptionKey = "RADIO";
+
+        partial void OnEncryptionKeyChanged(string value)
+        {
+            // Validate length (1-64 characters)
+            if (string.IsNullOrEmpty(value))
+            {
+                EncryptionKey = "RADIO"; // Reset to default if empty
+                return;
+            }
+
+            if (value.Length > 64)
+            {
+                EncryptionKey = value.Substring(0, 64); // Truncate to max length
+                return;
+            }
+
+            // Update protocol and save
+            CustomProtocol.EncryptionKey = value;
+            _settingsService.SaveSettings(new SettingsService.AppSettings { EncryptionKey = value });
+            Console.WriteLine($"[Settings] Encryption key updated to: '{value}' ({value.Length} chars)");
+        }
+
+        [ObservableProperty]
         private bool _isTransmitting;
 
         private bool CanTransmit => !IsTransmitting;
@@ -88,6 +113,13 @@ namespace RadioDataApp.ViewModels
             _modem = new AfskModem();
             _fileTransferService = new FileTransferService();
             _imageCompressionService = new ImageCompressionService();
+            _settingsService = new SettingsService();
+
+            // Load saved settings
+            var settings = _settingsService.LoadSettings();
+            _encryptionKey = settings.EncryptionKey;
+            CustomProtocol.EncryptionKey = _encryptionKey;
+            Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
 
             // Wire up service events
             _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;

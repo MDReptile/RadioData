@@ -10,7 +10,9 @@ namespace RadioDataApp.Modem
         // Sync Word: 0xAA 0x55 (10101010 01010101)
         // Unlikely to occur naturally in random data and distinct from standard flags
         private static readonly byte[] SyncWord = { 0xAA, 0x55 };
-        private const byte XorKey = 0x42; // Simple obfuscation key
+
+        // Configurable encryption key (default: "RADIO")
+        public static string EncryptionKey { get; set; } = "RADIO";
 
         public enum PacketType : byte
         {
@@ -23,6 +25,25 @@ namespace RadioDataApp.Modem
         {
             public PacketType Type { get; set; }
             public byte[] Payload { get; set; } = [];
+        }
+
+        private static byte[] ApplyEncryption(byte[] data)
+        {
+            byte[] keyBytes = Encoding.ASCII.GetBytes(EncryptionKey);
+            byte[] encrypted = new byte[data.Length];
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                encrypted[i] = (byte)(data[i] ^ keyBytes[i % keyBytes.Length]);
+            }
+
+            return encrypted;
+        }
+
+        private static byte[] RemoveEncryption(byte[] data)
+        {
+            // XOR is symmetric, so decryption is the same as encryption
+            return ApplyEncryption(data);
         }
 
         public static byte[] Encode(byte[] payload, PacketType type)
@@ -39,18 +60,12 @@ namespace RadioDataApp.Modem
             // 3. Packet Type (1 byte)
             packet.Add((byte)type);
 
-            // 4. Payload (Obfuscated)
-            foreach (byte b in payload)
-            {
-                packet.Add((byte)(b ^ XorKey));
-            }
+            // 4. Payload (Encrypted with user key)
+            byte[] encryptedPayload = ApplyEncryption(payload);
+            packet.AddRange(encryptedPayload);
 
-            // 5. Checksum (Simple Sum of payload + type)
-            byte checksum = (byte)type;
-            foreach (byte b in payload) checksum += b; // Sum of ORIGINAL bytes
-
-            // Re-calculating checksum on obfuscated data + type for receiver convenience
-            checksum = 0;
+            // 5. Checksum (Simple Sum of encrypted payload + type)
+            byte checksum = 0;
             for (int i = 3; i < packet.Count; i++)
             {
                 checksum += packet[i];
@@ -129,11 +144,13 @@ namespace RadioDataApp.Modem
 
             // Decode
             PacketType type = (PacketType)buffer[3];
-            byte[] payload = new byte[length];
+            byte[] encryptedPayload = new byte[length];
             for (int i = 0; i < length; i++)
             {
-                payload[i] = (byte)(buffer[4 + i] ^ XorKey);
+                encryptedPayload[i] = buffer[4 + i];
             }
+
+            byte[] payload = RemoveEncryption(encryptedPayload);
 
             // Consume packet
             buffer.RemoveRange(0, totalPacketSize);
