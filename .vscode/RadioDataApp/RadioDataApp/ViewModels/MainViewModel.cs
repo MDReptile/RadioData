@@ -9,6 +9,9 @@ using NAudio.Wave;
 using Microsoft.Win32;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System;
+using System.Linq;
 
 namespace RadioDataApp.ViewModels
 {
@@ -17,6 +20,7 @@ namespace RadioDataApp.ViewModels
         private readonly AudioService _audioService;
         private readonly AfskModem _modem;
         private readonly FileTransferService _fileTransferService;
+        private readonly ImageCompressionService _imageCompressionService;
 
         [ObservableProperty]
         private string _statusMessage = "Ready";
@@ -44,7 +48,7 @@ namespace RadioDataApp.ViewModels
         private int _selectedOutputDeviceIndex;
 
         [ObservableProperty]
-        private string _debugLog = "Application Started...\n";
+        private string _debugLog = "RADIO_DATA_TERMINAL_INITIALIZED...\n";
 
         [ObservableProperty]
         private double _transferProgress;
@@ -56,10 +60,16 @@ namespace RadioDataApp.ViewModels
         private bool _isTransferring;
 
         [ObservableProperty]
-        private double _inputFrequency = 1000; // idle position
+        private double _inputFrequency = 1000;
 
         [ObservableProperty]
-        private double _outputFrequency = 1000; // idle position
+        private double _outputFrequency = 1000;
+
+        [ObservableProperty]
+        private double _inputVolume = 0;
+
+        [ObservableProperty]
+        private double _outputVolume = 0;
 
         [ObservableProperty]
         private bool _compressImages = true;
@@ -77,6 +87,7 @@ namespace RadioDataApp.ViewModels
             _audioService = new AudioService();
             _modem = new AfskModem();
             _fileTransferService = new FileTransferService();
+            _imageCompressionService = new ImageCompressionService();
 
             // Wire up service events
             _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
@@ -114,6 +125,7 @@ namespace RadioDataApp.ViewModels
                         StatusMessage = "Transmission Complete";
                         IsTransmitting = false;
                         OutputFrequency = 1000;
+                        OutputVolume = 0;
                     }
                 });
             };
@@ -125,7 +137,17 @@ namespace RadioDataApp.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // Frequency detection via zero‑crossing
+                // 1. Calculate Volume (RMS)
+                long sum = 0;
+                for (int i = 0; i < audioData.Length; i += 2)
+                {
+                    short sample = BitConverter.ToInt16(audioData, i);
+                    sum += sample * sample;
+                }
+                double rms = Math.Sqrt((double)sum / (audioData.Length / 2));
+                InputVolume = Math.Min(1.0, rms / 10000.0); // Normalize roughly
+
+                // 2. Frequency detection via zero‑crossing
                 int zeroCrossings = 0;
                 short prevSample = 0;
                 for (int i = 0; i < audioData.Length; i += 2)
@@ -137,16 +159,19 @@ namespace RadioDataApp.ViewModels
                 }
                 double duration = audioData.Length / 2.0 / 44100.0;
                 double freq = (zeroCrossings / 2.0) / duration;
-                if (freq >= 1000 && freq <= 2400)
+
+                // Only update frequency if volume is sufficient (avoid noise)
+                if (InputVolume > 0.05 && freq >= 500 && freq <= 3000)
                     InputFrequency = freq;
 
+                // 3. Demodulate
                 var packet = _modem.Demodulate(audioData);
                 if (packet != null)
                 {
                     switch (packet.Type)
                     {
                         case CustomProtocol.PacketType.Text:
-                            DebugLog += System.Text.Encoding.ASCII.GetString(packet.Payload) + "\n";
+                            DebugLog += "RX: " + System.Text.Encoding.ASCII.GetString(packet.Payload) + "\n";
                             break;
                         case CustomProtocol.PacketType.FileHeader:
                             DebugLog += "\n=== RECEIVING FILE ===\n";
@@ -160,6 +185,14 @@ namespace RadioDataApp.ViewModels
             });
         }
 
+        [RelayCommand]
+        private void OpenReceivedFolder()
+        {
+            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReceivedFiles");
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            Process.Start("explorer.exe", path);
+        }
+
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void StartTransmission()
         {
@@ -170,19 +203,31 @@ namespace RadioDataApp.ViewModels
             byte[] audioSamples = _modem.Modulate(packet);
 
             // Frequency detection for UI
+            UpdateOutputMetrics(audioSamples);
+
+            _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
+        }
+
+        private void UpdateOutputMetrics(byte[] audioSamples)
+        {
+            // Freq
             int zeroCrossings = 0;
             short prevSample = 0;
+            long sum = 0;
             for (int i = 0; i < audioSamples.Length; i += 2)
             {
                 short sample = BitConverter.ToInt16(audioSamples, i);
                 if ((prevSample < 0 && sample >= 0) || (prevSample >= 0 && sample < 0))
                     zeroCrossings++;
                 prevSample = sample;
+                sum += sample * sample;
             }
             double duration = audioSamples.Length / 2.0 / 44100.0;
             OutputFrequency = (zeroCrossings / 2.0) / duration;
 
-            _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
+            // Vol
+            double rms = Math.Sqrt((double)sum / (audioSamples.Length / 2));
+            OutputVolume = Math.Min(1.0, rms / 10000.0);
         }
 
         [RelayCommand(CanExecute = nameof(CanTransmit))]
@@ -192,7 +237,35 @@ namespace RadioDataApp.ViewModels
             if (dialog.ShowDialog() != true)
                 return;
 
-            var fileInfo = new FileInfo(dialog.FileName);
+            string filePath = dialog.FileName;
+            string fileName = Path.GetFileName(filePath);
+            bool isCompressed = false;
+            string tempPath = "";
+
+            // Compression Logic
+            if (CompressImages && ImageCompressionService.IsImageFile(filePath))
+            {
+                try
+                {
+                    StatusMessage = "Compressing Image...";
+                    byte[] compressedData = _imageCompressionService.CompressImage(filePath);
+
+                    tempPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(fileName) + ".cimg");
+                    File.WriteAllBytes(tempPath, compressedData);
+
+                    filePath = tempPath;
+                    fileName = Path.GetFileName(tempPath); // .cimg
+                    isCompressed = true;
+
+                    DebugLog += $"[COMPRESSION] Reduced {new FileInfo(dialog.FileName).Length} bytes -> {compressedData.Length} bytes\n";
+                }
+                catch (Exception ex)
+                {
+                    DebugLog += $"[ERROR] Compression failed: {ex.Message}. Sending raw.\n";
+                }
+            }
+
+            var fileInfo = new FileInfo(filePath);
             long fileSize = fileInfo.Length;
             int packetCount = (int)Math.Ceiling(fileSize / 200.0);
 
@@ -201,7 +274,7 @@ namespace RadioDataApp.ViewModels
             double otherPacketTime = 4.8;
             double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
-            if (fileSize > 1024)
+            if (fileSize > 1024 && !isCompressed) // Don't ask if we just compressed it, user knows
             {
                 string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
                 var result = MessageBox.Show(
@@ -215,7 +288,6 @@ namespace RadioDataApp.ViewModels
 
             IsTransmitting = true;
             IsTransferring = true;
-            string fileName = Path.GetFileName(dialog.FileName);
             StatusMessage = $"Sending: {fileName}";
 
             DebugLog += "\n=== SENDING FILE ===\n";
@@ -227,56 +299,71 @@ namespace RadioDataApp.ViewModels
 
             Task.Run(() =>
             {
-                var packets = _fileTransferService.PrepareFileForTransmission(dialog.FileName);
-                int total = packets.Count;
-
-                // 1. Initialize continuous transmission
-                _audioService.InitializeTransmission(SelectedOutputDeviceIndex);
-
-                for (int i = 0; i < total; i++)
+                try
                 {
-                    // 2. Modulate packet (Preamble only on first)
-                    bool preamble = i == 0;
-                    var audio = _modem.Modulate(packets[i], preamble);
+                    var packets = _fileTransferService.PrepareFileForTransmission(filePath);
+                    int total = packets.Count;
 
-                    // 3. Queue audio immediately
-                    _audioService.QueueAudio(audio);
+                    // 1. Initialize continuous transmission
+                    _audioService.InitializeTransmission(SelectedOutputDeviceIndex);
 
-                    // 4. Update UI
-                    double prog = (i + 1) / (double)total * 100;
+                    for (int i = 0; i < total; i++)
+                    {
+                        // 2. Modulate packet (Preamble only on first)
+                        bool preamble = i == 0;
+                        var audio = _modem.Modulate(packets[i], preamble);
+
+                        // 3. Queue audio immediately
+                        _audioService.QueueAudio(audio);
+
+                        // Update Output Meters (approximate since it's queued)
+                        Application.Current.Dispatcher.Invoke(() => UpdateOutputMetrics(audio));
+
+                        // 4. Update UI
+                        double prog = (i + 1) / (double)total * 100;
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            TransferProgress = prog;
+                            TransferStatus = $"Sending {fileName}: Packet {i + 1}/{total}";
+                        });
+
+                        // Optional: Throttle loop slightly
+                        if (_audioService.GetBufferedDuration().TotalSeconds > 10)
+                        {
+                            Thread.Sleep(1000);
+                        }
+                    }
+
+                    // 5. Wait for playback to finish
+                    while (_audioService.GetBufferedDuration().TotalMilliseconds > 0)
+                    {
+                        Thread.Sleep(100);
+                    }
+
+                    // 6. Stop transmission
+                    _audioService.StopTransmission();
+
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        TransferProgress = prog;
-                        TransferStatus = $"Sending {fileName}: Packet {i + 1}/{total}";
+                        StatusMessage = $"File sent: {fileName}";
+                        TransferStatus = $"Completed: {fileName} ({total} packets)";
+                        TransferProgress = 100;
+                        IsTransmitting = false;
+                        IsTransferring = false;
+                        OutputFrequency = 1000;
+                        OutputVolume = 0;
+                        DebugLog += "=== SEND COMPLETE ===\n";
+                        DebugLog += "====================\n\n";
                     });
-
-                    // Optional: Throttle loop slightly if generating faster than playback to avoid massive buffer growth (though 10min buffer is plenty)
-                    if (_audioService.GetBufferedDuration().TotalSeconds > 10)
+                }
+                finally
+                {
+                    // Cleanup temp file
+                    if (isCompressed && File.Exists(tempPath))
                     {
-                        Thread.Sleep(1000);
+                        File.Delete(tempPath);
                     }
                 }
-
-                // 5. Wait for playback to finish
-                while (_audioService.GetBufferedDuration().TotalMilliseconds > 0)
-                {
-                    Thread.Sleep(100);
-                }
-
-                // 6. Stop transmission
-                _audioService.StopTransmission();
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    StatusMessage = $"File sent: {fileName}";
-                    TransferStatus = $"Completed: {fileName} ({total} packets)";
-                    TransferProgress = 100;
-                    IsTransmitting = false;
-                    IsTransferring = false;
-                    OutputFrequency = 1000;
-                    DebugLog += "=== SEND COMPLETE ===\n";
-                    DebugLog += "====================\n\n";
-                });
             });
         }
     }

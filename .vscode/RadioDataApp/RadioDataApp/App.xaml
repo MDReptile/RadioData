@@ -6,8 +6,27 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <materialDesign:BundledTheme BaseTheme="Dark" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+                
+                <!-- Custom Theme Overrides -->
+                <ResourceDictionary>
+                    <SolidColorBrush x:Key="PrimaryHueLightBrush" Color="#4CAF50"/>
+                    <SolidColorBrush x:Key="PrimaryHueMidBrush" Color="#454545"/> <!-- Header Background: Lighter Gray -->
+                    <SolidColorBrush x:Key="PrimaryHueDarkBrush" Color="#1E1E1E"/>
+                    <SolidColorBrush x:Key="PrimaryHueLightForegroundBrush" Color="#1E1E1E"/>
+                    <SolidColorBrush x:Key="PrimaryHueMidForegroundBrush" Color="#4CAF50"/> <!-- Header Text: Green -->
+                    <SolidColorBrush x:Key="PrimaryHueDarkForegroundBrush" Color="#4CAF50"/>
+                    
+                    <SolidColorBrush x:Key="SecondaryHueLightBrush" Color="#4CAF50"/>
+                    <SolidColorBrush x:Key="SecondaryHueMidBrush" Color="#4CAF50"/>
+                    <SolidColorBrush x:Key="SecondaryHueDarkBrush" Color="#4CAF50"/>
+                    <SolidColorBrush x:Key="SecondaryHueLightForegroundBrush" Color="#1E1E1E"/>
+                    <SolidColorBrush x:Key="SecondaryHueMidForegroundBrush" Color="#1E1E1E"/>
+                    <SolidColorBrush x:Key="SecondaryHueDarkForegroundBrush" Color="#1E1E1E"/>
+
+                    <SolidColorBrush x:Key="MaterialDesignBody" Color="#4CAF50"/>
+                    <SolidColorBrush x:Key="MaterialDesignPaper" Color="#1E1E1E"/>
+                </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

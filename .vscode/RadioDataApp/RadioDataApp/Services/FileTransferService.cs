@@ -10,6 +10,7 @@ namespace RadioDataApp.Services
     public class FileTransferService
     {
         private const int MaxChunkSize = 200; // Payload size limit
+        private readonly ImageCompressionService _imageCompressionService = new();
 
         // Receive State
         private bool _isReceivingFile;
@@ -137,18 +138,62 @@ namespace RadioDataApp.Services
         private void FinishReception()
         {
             _isReceivingFile = false;
-            string savePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Received_" + _currentFileName);
+
+            string receiveDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReceivedFiles");
+            if (!Directory.Exists(receiveDir))
+            {
+                Directory.CreateDirectory(receiveDir);
+            }
+
+            string savePath = Path.Combine(receiveDir, _currentFileName);
 
             // Ensure unique name
             int counter = 1;
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(_currentFileName);
+            string ext = Path.GetExtension(_currentFileName);
+
             while (File.Exists(savePath))
             {
-                savePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"Received_{counter++}_{_currentFileName}");
+                savePath = Path.Combine(receiveDir, $"{fileNameWithoutExt}_{counter++}{ext}");
             }
 
             File.WriteAllBytes(savePath, _fileBuffer);
             Console.WriteLine($"[FileTransfer] Saved to {savePath}");
-            FileReceived?.Invoke(this, savePath);
+
+            // Decompression Logic
+            if (Path.GetExtension(savePath).ToLower() == ".cimg")
+            {
+                try
+                {
+                    string decompressedPath = Path.ChangeExtension(savePath, ".png");
+
+                    // Ensure unique name for decompressed file
+                    counter = 1;
+                    fileNameWithoutExt = Path.GetFileNameWithoutExtension(decompressedPath);
+                    while (File.Exists(decompressedPath))
+                    {
+                        decompressedPath = Path.Combine(receiveDir, $"{fileNameWithoutExt}_{counter++}.png");
+                    }
+
+                    _imageCompressionService.DecompressImage(_fileBuffer, decompressedPath);
+
+                    Console.WriteLine($"[FileTransfer] Decompressed to {decompressedPath}");
+                    FileReceived?.Invoke(this, decompressedPath);
+
+                    // Optional: Delete the compressed file
+                    File.Delete(savePath);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[FileTransfer] Decompression failed: {ex.Message}");
+                    FileReceived?.Invoke(this, savePath); // Return original if failed
+                }
+            }
+            else
+            {
+                FileReceived?.Invoke(this, savePath);
+            }
+
             ProgressChanged?.Invoke(this, 1.0);
         }
     }
