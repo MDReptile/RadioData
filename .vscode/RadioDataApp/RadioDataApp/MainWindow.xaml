@@ -46,6 +46,9 @@
                     
                     <TextBlock Text="Input Level" Margin="0,10,0,5"/>
                     <ProgressBar Value="{Binding InputVolume}" Maximum="100" Height="10" />
+                    
+                    <TextBlock Text="Output Level" Margin="0,10,0,5"/>
+                    <ProgressBar Value="{Binding OutputVolume}" Maximum="100" Height="10" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                 </StackPanel>
             </GroupBox>
 

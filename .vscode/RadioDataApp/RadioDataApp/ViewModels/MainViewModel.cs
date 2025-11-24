@@ -63,7 +63,12 @@ namespace RadioDataApp.ViewModels
             _audioService.AudioDataReceived += OnAudioDataReceived;
             _audioService.TransmissionCompleted += (s, e) =>
             {
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Transmission Complete");
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    StatusMessage = "Transmission Complete";
+                    IsTransmitting = false;
+                    OutputVolume = 0;
+                });
             };
 
             // Start listening on the selected device immediately (or add a button)
@@ -99,11 +104,22 @@ namespace RadioDataApp.ViewModels
             });
         }
 
-        [RelayCommand]
+        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(StartTransmissionCommand))]
+        private bool _isTransmitting;
+
+        [ObservableProperty]
+        private double _outputVolume;
+
+        private bool CanTransmit => !IsTransmitting;
+
+        [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void StartTransmission()
         {
+            IsTransmitting = true;
+            OutputVolume = 100; // Simulate full volume
             StatusMessage = "Transmitting...";
-            StatusMessage = "Transmitting...";
+
             byte[] packet = CustomProtocol.Encode("Hello World");
             byte[] audioSamples = _modem.Modulate(packet);
 
@@ -114,12 +130,18 @@ namespace RadioDataApp.ViewModels
         [RelayCommand]
         private void StartTestTone()
         {
+            if (IsTransmitting) return;
+
+            IsTransmitting = true;
+            OutputVolume = 100;
             StatusMessage = "Playing 5s Test Tone...";
+
             // Generate 5 seconds of tone
             byte[] audioSamples = _modem.GetTestTone(5000);
 
             _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
-            StatusMessage = "Test Tone Complete";
+            // We need to handle completion for this too if we want the button to re-enable
+            // The same event will fire, so we just need to make sure the handler resets everything.
         }
     }
 }
