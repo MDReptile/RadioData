@@ -34,10 +34,19 @@ namespace RadioDataApp.ViewModels
 
         partial void OnSelectedInputDeviceIndexChanged(int value)
         {
+            // Index 0 is loopback
+            if (value == 0)
+            {
+                _audioService.IsLoopbackMode = true;
+                StatusMessage = "Loopback mode (software)";
+                return;
+            }
+
+            _audioService.IsLoopbackMode = false;
             try
             {
-                _audioService.StartListening(value);
-                StatusMessage = $"Listening on device {value}";
+                _audioService.StartListening(value - 1); // Adjust for loopback offset
+                StatusMessage = $"Listening on device {value - 1}";
             }
             catch (System.Exception ex)
             {
@@ -47,6 +56,20 @@ namespace RadioDataApp.ViewModels
 
         [ObservableProperty]
         private int _selectedOutputDeviceIndex;
+
+        partial void OnSelectedOutputDeviceIndexChanged(int value)
+        {
+            // Index 0 is loopback  
+            if (value == 0)
+            {
+                _audioService.IsLoopbackMode = true;
+                StatusMessage = "Loopback mode (software)";
+            }
+            else
+            {
+                _audioService.IsLoopbackMode = false;
+            }
+        }
 
         [ObservableProperty]
         private string _debugLog = "RADIO_DATA_TERMINAL_INITIALIZED...\n";
@@ -144,16 +167,25 @@ namespace RadioDataApp.ViewModels
 
         private void LoadDevices()
         {
+            // Add loopback option as first item
+            InputDevices.Add("0: Loopback (Software)");
+            OutputDevices.Add("0: Loopback (Software)");
+
             var inputs = AudioService.GetInputDevices();
             for (int i = 0; i < inputs.Count; i++)
-                InputDevices.Add($"{i}: {inputs[i].ProductName}");
+                InputDevices.Add($"{i + 1}: {inputs[i].ProductName}");
 
             var outputs = AudioService.GetOutputDevices();
             for (int i = 0; i < outputs.Count; i++)
-                OutputDevices.Add($"{i}: {outputs[i].ProductName}");
+                OutputDevices.Add($"{i + 1}: {outputs[i].ProductName}");
 
+            // Default to loopback
             if (InputDevices.Count > 0) SelectedInputDeviceIndex = 0;
             if (OutputDevices.Count > 0) SelectedOutputDeviceIndex = 0;
+
+            // Explicitly enable loopback mode (in case property change doesn't fire)
+            _audioService.IsLoopbackMode = true;
+            StatusMessage = "Loopback mode (software)";
 
             _audioService.AudioDataReceived += OnAudioDataReceived;
             _audioService.TransmissionCompleted += (s, e) =>
@@ -171,7 +203,7 @@ namespace RadioDataApp.ViewModels
                 });
             };
 
-            try { _audioService.StartListening(SelectedInputDeviceIndex); } catch { }
+            // Device selection will trigger OnSelectedInputDeviceIndexChanged which handles loopback mode
         }
 
         private void OnAudioDataReceived(object? sender, byte[] audioData)
@@ -209,6 +241,8 @@ namespace RadioDataApp.ViewModels
                 var packet = _modem.Demodulate(audioData);
                 if (packet != null)
                 {
+                    Console.WriteLine($"[Demod] Received {packet.Type} packet, payload length: {packet.Payload.Length}");
+
                     switch (packet.Type)
                     {
                         case CustomProtocol.PacketType.Text:

@@ -284,8 +284,17 @@
 
                 <!-- Debug Log -->
                 <GroupBox Header="SYSTEM LOG" Height="150">
-                    <ScrollViewer>
-                        <TextBlock Text="{Binding DebugLog}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
+                    <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto">
+                        <TextBox Text="{Binding DebugLog, Mode=OneWay}" 
+                                 TextWrapping="Wrap" 
+                                 FontFamily="Consolas" 
+                                 FontSize="11"
+                                 IsReadOnly="True"
+                                 Background="{StaticResource TerminalGray}"
+                                 Foreground="{StaticResource TerminalGreen}"
+                                 BorderThickness="0"
+                                 VerticalScrollBarVisibility="Disabled"
+                                 HorizontalScrollBarVisibility="Disabled"/>
                     </ScrollViewer>
                 </GroupBox>
             </StackPanel>
