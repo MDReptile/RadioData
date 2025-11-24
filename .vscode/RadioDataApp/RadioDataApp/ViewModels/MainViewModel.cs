@@ -71,7 +71,12 @@ namespace RadioDataApp.ViewModels
             _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
             _fileTransferService.FileReceived += (s, path) =>
             {
-                Application.Current.Dispatcher.Invoke(() => DebugLog += $"[FILE RECEIVED] Saved to: {path}\n");
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    DebugLog += $"\n=== FILE RECEIVED ===\n";
+                    DebugLog += $"Saved to: {path}\n";
+                    DebugLog += $"====================\n\n";
+                });
             };
 
             LoadDevices();
@@ -141,7 +146,12 @@ namespace RadioDataApp.ViewModels
                         string text = System.Text.Encoding.ASCII.GetString(packet.Payload);
                         DebugLog += text + "\n";
                     }
-                    else if (packet.Type == CustomProtocol.PacketType.FileHeader || packet.Type == CustomProtocol.PacketType.FileChunk)
+                    else if (packet.Type == CustomProtocol.PacketType.FileHeader)
+                    {
+                        DebugLog += $"\n=== RECEIVING FILE ===\n";
+                        _fileTransferService.HandlePacket(packet);
+                    }
+                    else if (packet.Type == CustomProtocol.PacketType.FileChunk)
                     {
                         _fileTransferService.HandlePacket(packet);
                     }
@@ -226,6 +236,14 @@ namespace RadioDataApp.ViewModels
                 string fileName = System.IO.Path.GetFileName(dialog.FileName);
                 StatusMessage = $"Sending: {fileName}";
 
+                // Add debug output
+                DebugLog += $"\n=== SENDING FILE ===\n";
+                DebugLog += $"File: {fileName}\n";
+                DebugLog += $"Size: {fileSizeBytes / 1024.0:F1} KB\n";
+                DebugLog += $"Packets: {packetCount}\n";
+                DebugLog += $"Est. time: {estimatedSeconds:F0}s\n";
+                DebugLog += $"====================\n";
+
                 Task.Run(() =>
                 {
                     var packets = _fileTransferService.PrepareFileForTransmission(dialog.FileName);
@@ -271,6 +289,12 @@ namespace RadioDataApp.ViewModels
                                 : $"{etaSeconds / 60:F1}m";
 
                             TransferStatus = $"Sending {fileName}: Packet {currentPacket}/{totalPackets} - ETA: {etaText}";
+
+                            // Update debug log every 5 packets or on first/last
+                            if (currentPacket == 1 || currentPacket % 5 == 0 || currentPacket == totalPackets)
+                            {
+                                DebugLog += $"Sent packet {currentPacket}/{totalPackets} ({progress:F0}%)\n";
+                            }
                         });
 
                         _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
@@ -279,12 +303,17 @@ namespace RadioDataApp.ViewModels
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
+                        TimeSpan totalTime = DateTime.Now - startTime;
                         StatusMessage = $"File sent: {fileName}";
                         TransferStatus = $"Completed: {fileName} ({totalPackets} packets)";
                         TransferProgress = 100;
                         IsTransmitting = false;
                         IsTransferring = false;
-                        OutputFrequency = 1000; // Reset to minimum (far left)
+                        OutputFrequency = 1000;
+
+                        DebugLog += $"=== SEND COMPLETE ===\n";
+                        DebugLog += $"Total time: {totalTime.TotalSeconds:F1}s\n";
+                        DebugLog += $"====================\n\n";
                     });
                 });
             }
