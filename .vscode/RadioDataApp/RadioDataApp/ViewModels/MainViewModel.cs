@@ -61,6 +61,11 @@ namespace RadioDataApp.ViewModels
             if (OutputDevices.Count > 0) SelectedOutputDeviceIndex = 0;
 
             _audioService.AudioDataReceived += OnAudioDataReceived;
+            _audioService.TransmissionCompleted += (s, e) =>
+            {
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Transmission Complete");
+            };
+
             // Start listening on the selected device immediately (or add a button)
             // For now, let's start when the device is selected or just default to 0
             try { _audioService.StartListening(SelectedInputDeviceIndex); } catch { }
@@ -84,10 +89,11 @@ namespace RadioDataApp.ViewModels
                 }
                 InputVolume = maxSample * 100;
 
-                string result = _modem.Demodulate(audioData);
-                if (!string.IsNullOrEmpty(result))
+                byte[]? result = _modem.Demodulate(audioData);
+                if (result != null)
                 {
-                    DebugLog += result + "\n";
+                    string text = System.Text.Encoding.ASCII.GetString(result);
+                    DebugLog += text;
                     // Auto-scroll logic would go here
                 }
             });
@@ -97,11 +103,12 @@ namespace RadioDataApp.ViewModels
         private void StartTransmission()
         {
             StatusMessage = "Transmitting...";
-            byte[] data = System.Text.Encoding.ASCII.GetBytes("Hello World");
-            byte[] audioSamples = _modem.Modulate(data);
+            StatusMessage = "Transmitting...";
+            byte[] packet = CustomProtocol.Encode("Hello World");
+            byte[] audioSamples = _modem.Modulate(packet);
 
             _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
-            StatusMessage = "Transmission Complete";
+            // Status update handled by TransmissionCompleted event
         }
 
         [RelayCommand]

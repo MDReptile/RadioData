@@ -64,6 +64,8 @@ namespace RadioDataApp.Services
             AudioDataReceived?.Invoke(this, buffer);
         }
 
+        public event EventHandler? TransmissionCompleted;
+
         public void StartTransmitting(int deviceNumber, byte[] audioData)
         {
             if (_waveOut != null)
@@ -76,6 +78,8 @@ namespace RadioDataApp.Services
             {
                 DeviceNumber = deviceNumber
             };
+
+            _waveOut.PlaybackStopped += (s, e) => TransmissionCompleted?.Invoke(this, EventArgs.Empty);
 
             var waveProvider = new BufferedWaveProvider(new WaveFormat(44100, 1));
             waveProvider.AddSamples(audioData, 0, audioData.Length);
