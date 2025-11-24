@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -19,6 +19,11 @@ namespace RadioDataApp
         public MainWindow()
         {
             InitializeComponent();
+
+            // Run loopback tests on startup (DEBUG only)
+#if DEBUG
+            Tests.LoopbackTest.RunTests();
+#endif
         }
     }
 }

@@ -158,13 +158,14 @@ namespace RadioDataApp.ViewModels
             _audioService.AudioDataReceived += OnAudioDataReceived;
             _audioService.TransmissionCompleted += (s, e) =>
             {
+                _visualizationCts?.Cancel();
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     if (!IsTransferring)
                     {
                         StatusMessage = "Transmission Complete";
                         IsTransmitting = false;
-                        OutputFrequency = 1000;
+                        OutputFrequency = 0;
                         OutputVolume = 0;
                     }
                 });
@@ -234,23 +235,99 @@ namespace RadioDataApp.ViewModels
             Process.Start("explorer.exe", path);
         }
 
+        [RelayCommand]
+        private async Task RunAudioLoopbackTest()
+        {
+            DebugLog += "\n=== STARTING AUDIO LOOPBACK TEST ===\n";
+            DebugLog += "This test will play audio and capture it\n";
+            DebugLog += "to verify the full send/receive pipeline.\n";
+            DebugLog += "Check Debug Output window for details.\n";
+            DebugLog += "====================================\n\n";
+
+            StatusMessage = "Running audio loopback test...";
+
+            try
+            {
+                // Run the audio loopback test with currently selected devices
+                await Tests.AudioLoopbackTest.RunAudioLoopbackTest(
+                    SelectedOutputDeviceIndex,
+                    SelectedInputDeviceIndex
+                );
+
+                DebugLog += "\n=== AUDIO TEST COMPLETE ===\n";
+                DebugLog += "Check Debug Output for results.\n";
+                DebugLog += "===========================\n\n";
+                StatusMessage = "Audio loopback test complete";
+            }
+            catch (Exception ex)
+            {
+                DebugLog += $"\n[ERROR] Audio test failed: {ex.Message}\n\n";
+                StatusMessage = "Audio loopback test failed";
+            }
+        }
+
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void StartTransmission()
         {
             IsTransmitting = true;
             StatusMessage = "Transmitting...";
 
+            DebugLog += $"TX: {MessageToSend}\n"; // Log sent message
+
             byte[] packet = CustomProtocol.Encode(MessageToSend);
             byte[] audioSamples = _modem.Modulate(packet);
 
-            // Frequency detection for UI
-            UpdateOutputMetrics(audioSamples);
+            // Start visualization
+            StartVisualization(audioSamples);
 
             _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
+
+            MessageToSend = string.Empty; // Clear input
+        }
+
+        private CancellationTokenSource? _visualizationCts;
+
+        private void StartVisualization(byte[] audioSamples)
+        {
+            _visualizationCts?.Cancel();
+            _visualizationCts = new CancellationTokenSource();
+            var token = _visualizationCts.Token;
+            byte[] samplesCopy = audioSamples.ToArray();
+
+            Task.Run(async () =>
+            {
+                int sampleRate = 44100;
+                int bytesPerSample = 2;
+                int updateIntervalMs = 50;
+                int samplesPerUpdate = (sampleRate * updateIntervalMs) / 1000;
+                int bytesPerUpdate = samplesPerUpdate * bytesPerSample;
+
+                int offset = 0;
+
+                while (offset < samplesCopy.Length && !token.IsCancellationRequested)
+                {
+                    int length = Math.Min(bytesPerUpdate, samplesCopy.Length - offset);
+                    byte[] chunk = new byte[length];
+                    Array.Copy(samplesCopy, offset, chunk, 0, length);
+
+                    Application.Current.Dispatcher.Invoke(() => UpdateOutputMetrics(chunk));
+
+                    offset += length;
+                    await Task.Delay(updateIntervalMs);
+                }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    OutputVolume = 0;
+                    OutputFrequency = 0;
+                });
+            }, token);
         }
 
         private void UpdateOutputMetrics(byte[] audioSamples)
         {
+            if (audioSamples.Length == 0) return;
+
             // Freq
             int zeroCrossings = 0;
             short prevSample = 0;
@@ -264,7 +341,8 @@ namespace RadioDataApp.ViewModels
                 sum += sample * sample;
             }
             double duration = audioSamples.Length / 2.0 / 44100.0;
-            OutputFrequency = (zeroCrossings / 2.0) / duration;
+            if (duration > 0)
+                OutputFrequency = (zeroCrossings / 2.0) / duration;
 
             // Vol
             double rms = Math.Sqrt((double)sum / (audioSamples.Length / 2));

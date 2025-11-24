@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/.vscode/RadioDataApp/RadioDataApp/bin/Debug/net8.0-windows/RadioDataApp.dll",
+            "program": "${workspaceFolder}/RadioDataApp/bin/Debug/net8.0-windows/RadioDataApp.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/.vscode/RadioDataApp/RadioDataApp",
+            "cwd": "${workspaceFolder}/RadioDataApp",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false

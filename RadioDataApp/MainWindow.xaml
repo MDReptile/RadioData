@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:RadioDataApp"
         xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
         mc:Ignorable="d"
-        Title="RadioData Terminal" Height="900" Width="800"
+        Title="RadioData" Height="900" Width="800"
         TextElement.Foreground="#4CAF50"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"
@@ -253,21 +253,32 @@
                 </GroupBox>
 
                 <!-- File Transfer Status -->
-                <GroupBox Header="TRANSFER STATUS" Margin="0,0,0,10" Height="120">
+                <GroupBox Header="TRANSFER STATUS" Margin="0,0,0,10">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Progress:" Margin="0,0,0,5"/>
-                        <ProgressBar Value="{Binding TransferProgress}" Maximum="100" Height="15" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Progress:" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" 
+                                    Command="{Binding OpenReceivedFolderCommand}"
+                                    Content="Open Received Files"
+                                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    BorderBrush="{StaticResource TerminalGreen}"
+                                    Padding="8,2"
+                                    Height="24"
+                                    FontSize="10"
+                                    Margin="0,0,0,5"/>
+                        </Grid>
+                        
+                        <ProgressBar Value="{Binding TransferProgress}" Maximum="100" Height="15" Margin="0,0,0,5"/>
+                        
                         <TextBlock Text="{Binding TransferStatus}" 
-                                   Margin="0,5,0,0" 
+                                   TextWrapping="Wrap"
                                    FontSize="11"
                                    FontFamily="Consolas"/>
-                        
-                        <Button Command="{Binding OpenReceivedFolderCommand}"
-                                Content="Open Received Files"
-                                Style="{DynamicResource MaterialDesignFlatButton}"
-                                Foreground="{StaticResource TerminalGreen}"
-                                HorizontalAlignment="Right"
-                                Margin="0,5,0,0" Background="#FF4A4A4A"/>
                     </StackPanel>
                 </GroupBox>
 

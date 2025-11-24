@@ -86,6 +86,7 @@ namespace RadioDataApp.Services
 
             _waveOut.Init(_bufferedWaveProvider);
             _waveOut.Play();
+            Console.WriteLine($"[AudioService] Started playback on device {deviceNumber}");
         }
 
         public void QueueAudio(byte[] audioData)
