@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:RadioDataApp"
         xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
         mc:Ignorable="d"
-        Title="RadioData" Height="450" Width="800"
+        Title="RadioData" Height="600" Width="800"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"
@@ -52,8 +52,13 @@
                 </StackPanel>
             </GroupBox>
 
+            <TextBox Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
+                     materialDesign:HintAssist.Hint="Message to Transmit"
+                     Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                     Margin="0,0,0,10"/>
+
             <Button Command="{Binding StartTransmissionCommand}" 
-                    Content="TRANSMIT TEST (Hello World)" 
+                    Content="TRANSMIT MESSAGE" 
                     Style="{DynamicResource MaterialDesignRaisedButton}"
                     Height="50" Margin="0,0,0,10"/>
             

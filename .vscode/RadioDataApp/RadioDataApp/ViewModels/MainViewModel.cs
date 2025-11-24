@@ -111,6 +111,9 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private double _outputVolume;
 
+        [ObservableProperty]
+        private string _messageToSend = "Hello World";
+
         private bool CanTransmit => !IsTransmitting;
 
         [RelayCommand(CanExecute = nameof(CanTransmit))]
@@ -120,7 +123,7 @@ namespace RadioDataApp.ViewModels
             OutputVolume = 100; // Simulate full volume
             StatusMessage = "Transmitting...";
 
-            byte[] packet = CustomProtocol.Encode("Hello World");
+            byte[] packet = CustomProtocol.Encode(MessageToSend);
             byte[] audioSamples = _modem.Modulate(packet);
 
             _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
