@@ -7,7 +7,7 @@ namespace RadioDataApp.Modem
     public class AfskModem
     {
         private const int SampleRate = 44100;
-        private const int BaudRate = 1200;
+        private const int BaudRate = 50;
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
@@ -73,8 +73,8 @@ namespace RadioDataApp.Modem
 
             for (int i = 0; i < sampleCount; i++)
             {
-                // Scale amplitude to 12.5%
-                short sample = (short)(Math.Sin(_phase) * short.MaxValue * 0.125);
+                // Scale amplitude to 50%
+                short sample = (short)(Math.Sin(_phase) * short.MaxValue * 0.5);
                 byte[] bytes = BitConverter.GetBytes(sample);
                 buffer.Add(bytes[0]);
                 buffer.Add(bytes[1]);

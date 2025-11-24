@@ -81,8 +81,7 @@ namespace RadioDataApp.Services
 
             _waveOut.PlaybackStopped += (s, e) => TransmissionCompleted?.Invoke(this, EventArgs.Empty);
 
-            var waveProvider = new BufferedWaveProvider(new WaveFormat(44100, 1));
-            waveProvider.AddSamples(audioData, 0, audioData.Length);
+            var waveProvider = new RawSourceWaveStream(new System.IO.MemoryStream(audioData), new WaveFormat(44100, 1));
 
             _waveOut.Init(waveProvider);
             _waveOut.Play();
