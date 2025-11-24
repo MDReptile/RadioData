@@ -7,7 +7,7 @@ namespace RadioDataApp.Modem
     public class AfskModem
     {
         private const int SampleRate = 44100;
-        private const int BaudRate = 150;
+        private const int BaudRate = 420;
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
@@ -52,8 +52,8 @@ namespace RadioDataApp.Modem
                 AddTone(samples, MarkFreq, 1000.0 / BaudRate);
             }
 
-            // Postamble/Tail
-            AddTone(samples, MarkFreq, 100);
+            // Postamble/Tail - 300ms for distinct end tone
+            AddTone(samples, MarkFreq, 300);
 
             return samples.ToArray();
         }

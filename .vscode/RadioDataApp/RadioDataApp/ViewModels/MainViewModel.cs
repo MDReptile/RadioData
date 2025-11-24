@@ -98,7 +98,7 @@ namespace RadioDataApp.ViewModels
                 if (result != null)
                 {
                     string text = System.Text.Encoding.ASCII.GetString(result);
-                    DebugLog += text;
+                    DebugLog += text + "\n";
                     // Auto-scroll logic would go here
                 }
             });
