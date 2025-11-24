@@ -5,6 +5,7 @@ using RadioDataApp.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
 using NAudio.Wave;
+using Microsoft.Win32;
 
 namespace RadioDataApp.ViewModels
 {
@@ -12,6 +13,7 @@ namespace RadioDataApp.ViewModels
     {
         private readonly AudioService _audioService;
         private readonly AfskModem _modem;
+        private readonly FileTransferService _fileTransferService;
 
         [ObservableProperty]
         private string _statusMessage = "Ready";
@@ -41,10 +43,20 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private string _debugLog = "Application Started...\n";
 
+        [ObservableProperty]
+        private double _transferProgress;
+
         public MainViewModel()
         {
             _audioService = new AudioService();
             _modem = new AfskModem();
+            _fileTransferService = new FileTransferService();
+
+            _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
+            _fileTransferService.FileReceived += (s, path) =>
+            {
+                Application.Current.Dispatcher.Invoke(() => DebugLog += $"[FILE RECEIVED] Saved to: {path}\n");
+            };
 
             LoadDevices();
         }
@@ -71,8 +83,6 @@ namespace RadioDataApp.ViewModels
                 });
             };
 
-            // Start listening on the selected device immediately (or add a button)
-            // For now, let's start when the device is selected or just default to 0
             try { _audioService.StartListening(SelectedInputDeviceIndex); } catch { }
         }
 
@@ -81,10 +91,9 @@ namespace RadioDataApp.ViewModels
 
         private void OnAudioDataReceived(object? sender, byte[] audioData)
         {
-            // Run on UI thread to update DebugLog
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // Calculate peak volume for the meter
+                // Meter logic
                 float maxSample = 0;
                 for (int i = 0; i < audioData.Length; i += 2)
                 {
@@ -94,12 +103,20 @@ namespace RadioDataApp.ViewModels
                 }
                 InputVolume = maxSample * 100;
 
-                byte[]? result = _modem.Demodulate(audioData);
-                if (result != null)
+                // Demodulate
+                CustomProtocol.DecodedPacket? packet = _modem.Demodulate(audioData);
+
+                if (packet != null)
                 {
-                    string text = System.Text.Encoding.ASCII.GetString(result);
-                    DebugLog += text + "\n";
-                    // Auto-scroll logic would go here
+                    if (packet.Type == CustomProtocol.PacketType.Text)
+                    {
+                        string text = System.Text.Encoding.ASCII.GetString(packet.Payload);
+                        DebugLog += text + "\n";
+                    }
+                    else if (packet.Type == CustomProtocol.PacketType.FileHeader || packet.Type == CustomProtocol.PacketType.FileChunk)
+                    {
+                        _fileTransferService.HandlePacket(packet);
+                    }
                 }
             });
         }
@@ -120,31 +137,83 @@ namespace RadioDataApp.ViewModels
         private void StartTransmission()
         {
             IsTransmitting = true;
-            OutputVolume = 100; // Simulate full volume
+            OutputVolume = 100;
             StatusMessage = "Transmitting...";
 
             byte[] packet = CustomProtocol.Encode(MessageToSend);
             byte[] audioSamples = _modem.Modulate(packet);
 
             _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
-            // Status update handled by TransmissionCompleted event
         }
 
-        [RelayCommand]
-        private void StartTestTone()
+        [RelayCommand(CanExecute = nameof(CanTransmit))]
+        private void SendFile()
         {
-            if (IsTransmitting) return;
+            var dialog = new OpenFileDialog
+            {
+                Title = "Select File to Send"
+            };
 
-            IsTransmitting = true;
-            OutputVolume = 100;
-            StatusMessage = "Playing 5s Test Tone...";
+            if (dialog.ShowDialog() == true)
+            {
+                var fileInfo = new System.IO.FileInfo(dialog.FileName);
+                long fileSizeBytes = fileInfo.Length;
 
-            // Generate 5 seconds of tone
-            byte[] audioSamples = _modem.GetTestTone(5000);
+                // Calculate estimated time (1000 baud ≈ 95 bytes/sec accounting for protocol overhead)
+                double estimatedSeconds = fileSizeBytes / 95.0;
 
-            _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
-            // We need to handle completion for this too if we want the button to re-enable
-            // The same event will fire, so we just need to make sure the handler resets everything.
+                // Warn if file is larger than ~1KB (32x32 PNG size threshold)
+                if (fileSizeBytes > 1024)
+                {
+                    string timeEstimate;
+                    if (estimatedSeconds < 60)
+                    {
+                        timeEstimate = $"{estimatedSeconds:F0} seconds";
+                    }
+                    else
+                    {
+                        timeEstimate = $"{estimatedSeconds / 60:F1} minutes";
+                    }
+
+                    var result = System.Windows.MessageBox.Show(
+                        $"File size: {fileSizeBytes / 1024.0:F1} KB\n" +
+                        $"Estimated transmission time: {timeEstimate}\n\n" +
+                        $"This may take a while. Continue?",
+                        "Large File Warning",
+                        System.Windows.MessageBoxButton.YesNo,
+                        System.Windows.MessageBoxImage.Warning);
+
+                    if (result != System.Windows.MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                }
+
+                IsTransmitting = true;
+                OutputVolume = 100;
+                StatusMessage = $"Sending file: {System.IO.Path.GetFileName(dialog.FileName)}";
+
+                Task.Run(() =>
+                {
+                    var packets = _fileTransferService.PrepareFileForTransmission(dialog.FileName);
+
+                    foreach (var packet in packets)
+                    {
+                        byte[] audioSamples = _modem.Modulate(packet);
+                        _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
+
+                        // Wait for transmission to complete
+                        Thread.Sleep(audioSamples.Length / 44100 * 1000 + 100);
+                    }
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        StatusMessage = "File transmission complete";
+                        IsTransmitting = false;
+                        OutputVolume = 0;
+                    });
+                });
+            }
         }
     }
 }

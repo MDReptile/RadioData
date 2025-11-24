@@ -8,12 +8,25 @@ namespace RadioDataApp.Modem
     public static class CustomProtocol
     {
         // Sync Word: 0xAA 0x55 (10101010 01010101)
+        // Unlikely to occur naturally in random data and distinct from standard flags
         private static readonly byte[] SyncWord = { 0xAA, 0x55 };
         private const byte XorKey = 0x42; // Simple obfuscation key
 
-        public static byte[] Encode(string text)
+        public enum PacketType : byte
         {
-            byte[] payload = Encoding.ASCII.GetBytes(text);
+            Text = 0x01,
+            FileHeader = 0x02,
+            FileChunk = 0x03
+        }
+
+        public class DecodedPacket
+        {
+            public PacketType Type { get; set; }
+            public byte[] Payload { get; set; } = [];
+        }
+
+        public static byte[] Encode(byte[] payload, PacketType type)
+        {
             List<byte> packet = [];
 
             // 1. Sync Word
@@ -23,17 +36,20 @@ namespace RadioDataApp.Modem
             if (payload.Length > 255) throw new ArgumentException("Message too long");
             packet.Add((byte)payload.Length);
 
-            // 3. Payload (Obfuscated)
+            // 3. Packet Type (1 byte)
+            packet.Add((byte)type);
+
+            // 4. Payload (Obfuscated)
             foreach (byte b in payload)
             {
                 packet.Add((byte)(b ^ XorKey));
             }
 
-            // 4. Checksum (Simple Sum of payload)
-            byte checksum = 0;
-            foreach (byte b in payload) checksum += b; // Sum of ORIGINAL bytes or OBFUSCATED? Let's do Obfuscated for easier checking
+            // 5. Checksum (Simple Sum of payload + type)
+            byte checksum = (byte)type;
+            foreach (byte b in payload) checksum += b; // Sum of ORIGINAL bytes
 
-            // Re-calculating checksum on obfuscated data
+            // Re-calculating checksum on obfuscated data + type for receiver convenience
             checksum = 0;
             for (int i = 3; i < packet.Count; i++)
             {
@@ -44,9 +60,14 @@ namespace RadioDataApp.Modem
             return packet.ToArray();
         }
 
-        public static string? DecodeAndConsume(List<byte> buffer)
+        public static byte[] Encode(string text)
         {
-            if (buffer.Count < 4) return null;
+            return Encode(Encoding.ASCII.GetBytes(text), PacketType.Text);
+        }
+
+        public static DecodedPacket? DecodeAndConsume(List<byte> buffer)
+        {
+            if (buffer.Count < 5) return null; // Sync(2) + Len(1) + Type(1) + Checksum(1)
 
             // Find Sync Word
             int syncIndex = -1;
@@ -71,8 +92,6 @@ namespace RadioDataApp.Modem
                 return null;
             }
 
-            Console.WriteLine($"[DEBUG] Sync found at index {syncIndex}");
-
             // Remove garbage before sync
             if (syncIndex > 0)
             {
@@ -83,45 +102,43 @@ namespace RadioDataApp.Modem
             // Check Length
             if (buffer.Count < 3) return null;
             byte length = buffer[2];
-            Console.WriteLine($"[DEBUG] Payload Length: {length}");
 
-            int totalPacketSize = 3 + length + 1;
+            int totalPacketSize = 3 + 1 + length + 1; // Sync(2) + Len(1) + Type(1) + Payload(L) + Checksum(1)
 
             if (buffer.Count < totalPacketSize)
             {
-                Console.WriteLine($"[DEBUG] Waiting for more data. Have {buffer.Count}, need {totalPacketSize}");
                 return null; // Wait for more data
             }
 
             // Validate Checksum
             byte calculatedChecksum = 0;
-            for (int i = 0; i < length; i++)
+            for (int i = 3; i < totalPacketSize - 1; i++) // Sum Type + Obfuscated Payload
             {
-                calculatedChecksum += buffer[3 + i];
+                calculatedChecksum += buffer[i];
             }
 
-            byte receivedChecksum = buffer[3 + length];
-            Console.WriteLine($"[DEBUG] Checksum Calc: {calculatedChecksum}, Recv: {receivedChecksum}");
+            byte receivedChecksum = buffer[totalPacketSize - 1];
 
             if (calculatedChecksum != receivedChecksum)
             {
-                Console.WriteLine("[DEBUG] Checksum Mismatch! (Ignoring for debug)");
+                Console.WriteLine("[DEBUG] Checksum Mismatch!");
                 // Corrupt packet, remove the Sync Word and try again next time
-                // buffer.RemoveRange(0, 2); 
-                // return null;
+                buffer.RemoveRange(0, 2);
+                return null;
             }
 
             // Decode
+            PacketType type = (PacketType)buffer[3];
             byte[] payload = new byte[length];
             for (int i = 0; i < length; i++)
             {
-                payload[i] = (byte)(buffer[3 + i] ^ XorKey);
+                payload[i] = (byte)(buffer[4 + i] ^ XorKey);
             }
 
             // Consume packet
             buffer.RemoveRange(0, totalPacketSize);
 
-            return Encoding.ASCII.GetString(payload);
+            return new DecodedPacket { Type = type, Payload = payload };
         }
     }
 }

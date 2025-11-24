@@ -1,0 +1,14 @@
+RadioData File Transfer Test
+
+This is a test file for the RadioData application's file transfer capability.
+
+The application uses a custom AFSK (Audio Frequency Shift Keying) protocol running at 420 baud to transmit data over radio frequencies. This novel implementation features:
+
+1. Custom packet framing with sync words
+2. XOR obfuscation for security
+3. Packet type identification (Text, FileHeader, FileChunk)
+4. Checksums for data integrity
+
+This text file demonstrates the ability to transmit structured data beyond simple text messages. The file is split into chunks and reassembled on the receiving end.
+
+Testing successful transmission!

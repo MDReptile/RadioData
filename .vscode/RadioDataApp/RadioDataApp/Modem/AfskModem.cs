@@ -7,7 +7,7 @@ namespace RadioDataApp.Modem
     public class AfskModem
     {
         private const int SampleRate = 44100;
-        private const int BaudRate = 420;
+        private const int BaudRate = 1000;
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
@@ -85,7 +85,7 @@ namespace RadioDataApp.Modem
 
         private List<byte> _byteBuffer = [];
 
-        public byte[]? Demodulate(byte[] audioBytes)
+        public CustomProtocol.DecodedPacket? Demodulate(byte[] audioBytes)
         {
             List<byte> newBytes = [];
 
@@ -107,10 +107,10 @@ namespace RadioDataApp.Modem
             {
                 _byteBuffer.AddRange(newBytes);
                 // Try to decode a packet from the buffer
-                string? decodedMessage = CustomProtocol.DecodeAndConsume(_byteBuffer);
-                if (decodedMessage != null)
+                CustomProtocol.DecodedPacket? packet = CustomProtocol.DecodeAndConsume(_byteBuffer);
+                if (packet != null)
                 {
-                    return System.Text.Encoding.ASCII.GetBytes(decodedMessage);
+                    return packet;
                 }
             }
 

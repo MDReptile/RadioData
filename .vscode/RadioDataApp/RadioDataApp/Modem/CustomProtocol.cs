@@ -12,9 +12,21 @@ namespace RadioDataApp.Modem
         private static readonly byte[] SyncWord = { 0xAA, 0x55 };
         private const byte XorKey = 0x42; // Simple obfuscation key
 
-        public static byte[] Encode(string text)
+        public enum PacketType : byte
         {
-            byte[] payload = Encoding.ASCII.GetBytes(text);
+            Text = 0x01,
+            FileHeader = 0x02,
+            FileChunk = 0x03
+        }
+
+        public class DecodedPacket
+        {
+            public PacketType Type { get; set; }
+            public byte[] Payload { get; set; } = [];
+        }
+
+        public static byte[] Encode(byte[] payload, PacketType type)
+        {
             List<byte> packet = [];
 
             // 1. Sync Word
@@ -24,17 +36,20 @@ namespace RadioDataApp.Modem
             if (payload.Length > 255) throw new ArgumentException("Message too long");
             packet.Add((byte)payload.Length);
 
-            // 3. Payload (Obfuscated)
+            // 3. Packet Type (1 byte)
+            packet.Add((byte)type);
+
+            // 4. Payload (Obfuscated)
             foreach (byte b in payload)
             {
                 packet.Add((byte)(b ^ XorKey));
             }
 
-            // 4. Checksum (Simple Sum of payload)
-            byte checksum = 0;
-            foreach (byte b in payload) checksum += b; // Sum of ORIGINAL bytes or OBFUSCATED? Let's do Obfuscated for easier checking
+            // 5. Checksum (Simple Sum of payload + type)
+            byte checksum = (byte)type;
+            foreach (byte b in payload) checksum += b; // Sum of ORIGINAL bytes
 
-            // Re-calculating checksum on obfuscated data
+            // Re-calculating checksum on obfuscated data + type for receiver convenience
             checksum = 0;
             for (int i = 3; i < packet.Count; i++)
             {
@@ -45,75 +60,14 @@ namespace RadioDataApp.Modem
             return packet.ToArray();
         }
 
-        public static string? TryDecode(List<byte> receivedBytes)
+        public static byte[] Encode(string text)
         {
-            // Search for Sync Word
-            // We need at least Sync(2) + Len(1) + Checksum(1) = 4 bytes
-            if (receivedBytes.Count < 4) return null;
-
-            // Find Sync Word
-            int syncIndex = -1;
-            for (int i = 0; i < receivedBytes.Count - 1; i++)
-            {
-                if (receivedBytes[i] == SyncWord[0] && receivedBytes[i + 1] == SyncWord[1])
-                {
-                    syncIndex = i;
-                    break;
-                }
-            }
-
-            if (syncIndex == -1) return null;
-
-            // Check if we have enough bytes for Length
-            if (syncIndex + 2 >= receivedBytes.Count) return null; // Need Length byte
-
-            byte length = receivedBytes[syncIndex + 2];
-            int totalPacketSize = 2 + 1 + length + 1; // Sync + Len + Payload + Checksum
-
-            if (syncIndex + totalPacketSize > receivedBytes.Count) return null; // Incomplete packet
-
-            // Validate Checksum
-            byte calculatedChecksum = 0;
-            for (int i = 0; i < length; i++)
-            {
-                calculatedChecksum += receivedBytes[syncIndex + 3 + i];
-            }
-
-            byte receivedChecksum = receivedBytes[syncIndex + 3 + length];
-
-            if (calculatedChecksum != receivedChecksum)
-            {
-                // Bad checksum, remove sync word and try again? 
-                // For now, just return null and let the caller handle buffer cleanup (not implemented here yet)
-                // Actually, we should probably consume the bytes if we found a sync word but failed checksum?
-                // Or just return null and let the buffer grow?
-                return null;
-            }
-
-            // Decode Payload
-            byte[] payload = new byte[length];
-            for (int i = 0; i < length; i++)
-            {
-                payload[i] = (byte)(receivedBytes[syncIndex + 3 + i] ^ XorKey);
-            }
-
-            // Remove processed bytes from the input list?
-            // The caller usually handles this, but here we are just "TryDecode".
-            // Let's return the string and let the caller clear the buffer up to the end of the packet.
-
-            return Encoding.ASCII.GetString(payload);
+            return Encode(Encoding.ASCII.GetBytes(text), PacketType.Text);
         }
 
-        // Helper to remove processed packet from buffer
-        public static void RemovePacket(List<byte> buffer, string decodedText)
+        public static DecodedPacket? DecodeAndConsume(List<byte> buffer)
         {
-            // This is tricky without knowing exactly where it was found again.
-            // Let's refine TryDecode to return the consumed count or modify the buffer directly.
-        }
-
-        public static string? DecodeAndConsume(List<byte> buffer)
-        {
-            if (buffer.Count < 4) return null;
+            if (buffer.Count < 5) return null; // Sync(2) + Len(1) + Type(1) + Checksum(1)
 
             // Find Sync Word
             int syncIndex = -1;
@@ -148,37 +102,43 @@ namespace RadioDataApp.Modem
             // Check Length
             if (buffer.Count < 3) return null;
             byte length = buffer[2];
-            int totalPacketSize = 3 + length + 1;
 
-            if (buffer.Count < totalPacketSize) return null; // Wait for more data
+            int totalPacketSize = 3 + 1 + length + 1; // Sync(2) + Len(1) + Type(1) + Payload(L) + Checksum(1)
+
+            if (buffer.Count < totalPacketSize)
+            {
+                return null; // Wait for more data
+            }
 
             // Validate Checksum
             byte calculatedChecksum = 0;
-            for (int i = 0; i < length; i++)
+            for (int i = 3; i < totalPacketSize - 1; i++) // Sum Type + Obfuscated Payload
             {
-                calculatedChecksum += buffer[3 + i];
+                calculatedChecksum += buffer[i];
             }
 
-            byte receivedChecksum = buffer[3 + length];
+            byte receivedChecksum = buffer[totalPacketSize - 1];
 
             if (calculatedChecksum != receivedChecksum)
             {
+                Console.WriteLine("[DEBUG] Checksum Mismatch!");
                 // Corrupt packet, remove the Sync Word and try again next time
                 buffer.RemoveRange(0, 2);
                 return null;
             }
 
             // Decode
+            PacketType type = (PacketType)buffer[3];
             byte[] payload = new byte[length];
             for (int i = 0; i < length; i++)
             {
-                payload[i] = (byte)(buffer[3 + i] ^ XorKey);
+                payload[i] = (byte)(buffer[4 + i] ^ XorKey);
             }
 
             // Consume packet
             buffer.RemoveRange(0, totalPacketSize);
 
-            return Encoding.ASCII.GetString(payload);
+            return new DecodedPacket { Type = type, Payload = payload };
         }
     }
 }

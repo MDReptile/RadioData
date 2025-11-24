@@ -1,54 +1,54 @@
 using System;
-using System.Text;
-using System.Collections.Generic;
-using RadioDataApp.Modem;
+using ModemTest;
 
-namespace RadioDataApp.Tests
+class Program
 {
-    class Program
+    static void Main()
     {
-        static void Main(string[] args)
+        Console.WriteLine("=== AFSK Modem Test with Custom Protocol ===\n");
+
+        var modem = new AfskModem();
+
+        // Test message
+        string testMessage = "Hello World";
+        Console.WriteLine($"Original: {testMessage}");
+
+        // Encode using CustomProtocol (returns packet with Type=Text)
+        byte[] packet = CustomProtocol.Encode(testMessage);
+        Console.WriteLine($"Packet size: {packet.Length} bytes");
+
+        // Modulate
+        byte[] audioSamples = modem.Modulate(packet);
+        Console.WriteLine($"Audio samples: {audioSamples.Length} bytes ({audioSamples.Length / 88.2f:F1}ms at 44.1kHz)\n");
+
+        // Demodulate
+        Console.WriteLine("Demodulating...");
+        CustomProtocol.DecodedPacket? decodedPacket = modem.Demodulate(audioSamples);
+
+        if (decodedPacket != null)
         {
-            Console.WriteLine("Testing AfskModem with CustomProtocol...");
-            var modem = new AfskModem();
-            string message = "Hello World";
-
-            Console.WriteLine($"Modulating: {message}");
-            // Use Custom Protocol
-            byte[] packet = CustomProtocol.Encode(message);
-            Console.WriteLine($"Encoded Packet Length: {packet.Length}");
-
-            byte[] audio = modem.Modulate(packet);
-            Console.WriteLine($"Generated {audio.Length} bytes of audio.");
-
-            Console.WriteLine("Demodulating...");
-            // Simulate streaming by feeding small chunks
-            List<byte> receivedBytes = new List<byte>();
-            int chunkSize = 1024;
-            for (int i = 0; i < audio.Length; i += chunkSize)
+            if (decodedPacket.Type == CustomProtocol.PacketType.Text)
             {
-                int length = Math.Min(chunkSize, audio.Length - i);
-                byte[] chunk = new byte[length];
-                Array.Copy(audio, i, chunk, 0, length);
+                string decoded = System.Text.Encoding.ASCII.GetString(decodedPacket.Payload);
+                Console.WriteLine($"Decoded: {decoded}");
 
-                byte[]? decodedChunk = modem.Demodulate(chunk);
-                if (decodedChunk != null)
+                if (decoded == testMessage)
                 {
-                    receivedBytes.AddRange(decodedChunk);
+                    Console.WriteLine("\nSUCCESS: Message matches!");
                 }
-            }
-
-            string receivedString = Encoding.ASCII.GetString(receivedBytes.ToArray());
-            Console.WriteLine($"Decoded: {receivedString}");
-
-            if (receivedString == message)
-            {
-                Console.WriteLine("SUCCESS: Message matches!");
+                else
+                {
+                    Console.WriteLine($"\nFAILURE: Expected '{testMessage}', got '{decoded}'");
+                }
             }
             else
             {
-                Console.WriteLine("FAILURE: Message mismatch.");
+                Console.WriteLine($"\nFAILURE: Wrong packet type: {decodedPacket.Type}");
             }
+        }
+        else
+        {
+            Console.WriteLine("\nFAILURE: Demodulation returned null");
         }
     }
 }
