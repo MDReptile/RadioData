@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:RadioDataApp"
         xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
         mc:Ignorable="d"
-        Title="RadioData" Height="706" Width="800"
+        Title="RadioData" Height="820" Width="800"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"
@@ -42,13 +42,23 @@
                               Margin="0,0,0,10"/>
                     <ComboBox materialDesign:HintAssist.Hint="Output Device" 
                               ItemsSource="{Binding OutputDevices}" 
-                              SelectedIndex="{Binding SelectedOutputDeviceIndex}"/>
+                              SelectedIndex="{Binding SelectedOutputDeviceIndex}"
+                              Margin="0,0,0,10"/>
                     
-                    <TextBlock Text="Input Level" Margin="0,10,0,5"/>
-                    <ProgressBar Value="{Binding InputVolume}" Maximum="100" Height="10" />
+                    <TextBlock Text="Tone Frequency Meters" FontWeight="Bold" Margin="0,10,0,10"/>
                     
-                    <TextBlock Text="Output Level" Margin="0,10,0,5"/>
-                    <ProgressBar Value="{Binding OutputVolume}" Maximum="100" Height="10" Foreground="Red"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                        <TextBlock Text="Input Tone: " Width="80"/>
+                        <TextBlock Text="{Binding InputFrequency, StringFormat='{}{0:F0} Hz'}" FontWeight="Bold" Width="80"/>
+                        <TextBlock Text="(Mark=1200, Space=2200)" FontSize="10" Foreground="Gray"/>
+                    </StackPanel>
+                    <ProgressBar Value="{Binding InputFrequency}" Minimum="1000" Maximum="2400" Height="10"/>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <TextBlock Text="Output Tone: " Width="80"/>
+                        <TextBlock Text="{Binding OutputFrequency, StringFormat='{}{0:F0} Hz'}" FontWeight="Bold" Width="80" Foreground="Red"/>
+                    </StackPanel>
+                    <ProgressBar Value="{Binding OutputFrequency}" Minimum="1000" Maximum="2400" Height="10" Foreground="Red"/>
                 </StackPanel>
             </GroupBox>
 
@@ -56,6 +66,10 @@
                      materialDesign:HintAssist.Hint="Message to Transmit"
                      Style="{DynamicResource MaterialDesignOutlinedTextBox}"
                      Margin="0,0,0,10"/>
+
+            <CheckBox Content="Compress Images (50-66% smaller, faster transfer)" 
+                      IsChecked="{Binding CompressImages}"
+                      Margin="0,0,0,10"/>
 
             <Button Command="{Binding StartTransmissionCommand}" 
                     Content="TRANSMIT MESSAGE" 
@@ -69,11 +83,10 @@
 
             <TextBlock Text="File Transfer Progress" Margin="0,10,0,5"/>
             <ProgressBar Value="{Binding TransferProgress}" Maximum="100" Height="10" />
-            
-            <Button Command="{Binding StartTestToneCommand}" 
-                    Content="PLAY 5s TUNING TONE" 
-                    Style="{DynamicResource MaterialDesignOutlinedButton}"
-                    Height="50" Margin="0,0,0,10"/>
+            <TextBlock Text="{Binding TransferStatus}" 
+                       Margin="0,5,0,10" 
+                       FontSize="11"
+                       Foreground="{DynamicResource PrimaryHueMidBrush}"/>
 
             <GroupBox Header="Debug Log" Style="{DynamicResource MaterialDesignCardGroupBox}" Height="150">
                 <ScrollViewer>

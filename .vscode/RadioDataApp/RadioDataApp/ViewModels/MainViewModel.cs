@@ -4,6 +4,7 @@ using RadioDataApp.Modem;
 using RadioDataApp.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.IO;
 using NAudio.Wave;
 using Microsoft.Win32;
 
@@ -46,6 +47,21 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private double _transferProgress;
 
+        [ObservableProperty]
+        private string _transferStatus = "";
+
+        [ObservableProperty]
+        private bool _isTransferring;
+
+        [ObservableProperty]
+        private double _inputFrequency = 1000; // Far left when idle
+
+        [ObservableProperty]
+        private double _outputFrequency = 1000; // Far left when idle
+
+        [ObservableProperty]
+        private bool _compressImages = true; // Enable by default
+
         public MainViewModel()
         {
             _audioService = new AudioService();
@@ -77,33 +93,45 @@ namespace RadioDataApp.ViewModels
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    StatusMessage = "Transmission Complete";
-                    IsTransmitting = false;
-                    OutputVolume = 0;
+                    // Don't reset during file transfer - let SendFile handle it
+                    if (!IsTransferring)
+                    {
+                        StatusMessage = "Transmission Complete";
+                        IsTransmitting = false;
+                        OutputFrequency = 1000; // Reset to minimum (far left)
+                    }
                 });
             };
 
             try { _audioService.StartListening(SelectedInputDeviceIndex); } catch { }
         }
 
-        [ObservableProperty]
-        private double _inputVolume;
-
         private void OnAudioDataReceived(object? sender, byte[] audioData)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // Meter logic
-                float maxSample = 0;
+                // Detect frequency using zero-crossing rate
+                int zeroCrossings = 0;
+                short prevSample = 0;
+
                 for (int i = 0; i < audioData.Length; i += 2)
                 {
                     short sample = BitConverter.ToInt16(audioData, i);
-                    float normalized = Math.Abs(sample / 32768f);
-                    if (normalized > maxSample) maxSample = normalized;
+                    if ((prevSample < 0 && sample >= 0) || (prevSample >= 0 && sample < 0))
+                    {
+                        zeroCrossings++;
+                    }
+                    prevSample = sample;
                 }
-                InputVolume = maxSample * 100;
 
-                // Demodulate
+                double durationSeconds = audioData.Length / 2.0 / 44100.0;
+                double frequency = (zeroCrossings / 2.0) / durationSeconds;
+
+                if (frequency >= 1000 && frequency <= 2400)
+                {
+                    InputFrequency = frequency;
+                }
+
                 CustomProtocol.DecodedPacket? packet = _modem.Demodulate(audioData);
 
                 if (packet != null)
@@ -123,10 +151,8 @@ namespace RadioDataApp.ViewModels
 
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(StartTransmissionCommand))]
+        [NotifyCanExecuteChangedFor(nameof(SendFileCommand))]
         private bool _isTransmitting;
-
-        [ObservableProperty]
-        private double _outputVolume;
 
         [ObservableProperty]
         private string _messageToSend = "Hello World";
@@ -137,11 +163,25 @@ namespace RadioDataApp.ViewModels
         private void StartTransmission()
         {
             IsTransmitting = true;
-            OutputVolume = 100;
             StatusMessage = "Transmitting...";
 
             byte[] packet = CustomProtocol.Encode(MessageToSend);
             byte[] audioSamples = _modem.Modulate(packet);
+
+            // Detect frequency
+            int zeroCrossings = 0;
+            short prevSample = 0;
+            for (int i = 0; i < audioSamples.Length; i += 2)
+            {
+                short sample = BitConverter.ToInt16(audioSamples, i);
+                if ((prevSample < 0 && sample >= 0) || (prevSample >= 0 && sample < 0))
+                {
+                    zeroCrossings++;
+                }
+                prevSample = sample;
+            }
+            double durationSeconds = audioSamples.Length / 2.0 / 44100.0;
+            OutputFrequency = (zeroCrossings / 2.0) / durationSeconds;
 
             _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
         }
@@ -149,68 +189,102 @@ namespace RadioDataApp.ViewModels
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void SendFile()
         {
-            var dialog = new OpenFileDialog
-            {
-                Title = "Select File to Send"
-            };
+            var dialog = new OpenFileDialog { Title = "Select File to Send" };
 
             if (dialog.ShowDialog() == true)
             {
                 var fileInfo = new System.IO.FileInfo(dialog.FileName);
                 long fileSizeBytes = fileInfo.Length;
 
-                // Calculate estimated time (1000 baud ≈ 95 bytes/sec accounting for protocol overhead)
-                double estimatedSeconds = fileSizeBytes / 95.0;
+                // Calculate accurate time estimate accounting for all overhead
+                int packetCount = (int)Math.Ceiling(fileSizeBytes / 200.0);
+                double firstPacketTime = 3.4;  // 1s preamble + ~2s data + 0.3s postamble + 0.1s delay
+                double otherPacketTime = 2.4;  // ~2s data + 0.3s postamble + 0.1s delay
+                double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
-                // Warn if file is larger than ~1KB (32x32 PNG size threshold)
                 if (fileSizeBytes > 1024)
                 {
-                    string timeEstimate;
-                    if (estimatedSeconds < 60)
-                    {
-                        timeEstimate = $"{estimatedSeconds:F0} seconds";
-                    }
-                    else
-                    {
-                        timeEstimate = $"{estimatedSeconds / 60:F1} minutes";
-                    }
+                    string timeEstimate = estimatedSeconds < 60
+                        ? $"{estimatedSeconds:F0} seconds"
+                        : $"{estimatedSeconds / 60:F1} minutes";
 
                     var result = System.Windows.MessageBox.Show(
                         $"File size: {fileSizeBytes / 1024.0:F1} KB\n" +
+                        $"Packets: {packetCount}\n" +
                         $"Estimated transmission time: {timeEstimate}\n\n" +
-                        $"This may take a while. Continue?",
-                        "Large File Warning",
+                        $"Continue?",
+                        "File Transfer",
                         System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Warning);
+                        System.Windows.MessageBoxImage.Information);
 
                     if (result != System.Windows.MessageBoxResult.Yes)
-                    {
                         return;
-                    }
                 }
 
                 IsTransmitting = true;
-                OutputVolume = 100;
-                StatusMessage = $"Sending file: {System.IO.Path.GetFileName(dialog.FileName)}";
+                IsTransferring = true;
+                string fileName = System.IO.Path.GetFileName(dialog.FileName);
+                StatusMessage = $"Sending: {fileName}";
 
                 Task.Run(() =>
                 {
                     var packets = _fileTransferService.PrepareFileForTransmission(dialog.FileName);
+                    int totalPackets = packets.Count;
+                    int currentPacket = 0;
+                    DateTime startTime = DateTime.Now;
 
                     foreach (var packet in packets)
                     {
-                        byte[] audioSamples = _modem.Modulate(packet);
-                        _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
+                        currentPacket++;
+                        double progress = (double)currentPacket / totalPackets * 100;
+                        TimeSpan elapsed = DateTime.Now - startTime;
+                        double packetsPerSecond = currentPacket / elapsed.TotalSeconds;
+                        int remainingPackets = totalPackets - currentPacket;
+                        double etaSeconds = remainingPackets / packetsPerSecond;
 
-                        // Wait for transmission to complete
+                        // Only first packet needs preamble to wake VOX
+                        bool needsPreamble = (currentPacket == 1);
+                        byte[] audioSamples = _modem.Modulate(packet, needsPreamble);
+
+                        // Detect frequency
+                        int zeroCrossings = 0;
+                        short prevSample = 0;
+                        for (int i = 0; i < audioSamples.Length; i += 2)
+                        {
+                            short sample = BitConverter.ToInt16(audioSamples, i);
+                            if ((prevSample < 0 && sample >= 0) || (prevSample >= 0 && sample < 0))
+                            {
+                                zeroCrossings++;
+                            }
+                            prevSample = sample;
+                        }
+                        double durationSeconds = audioSamples.Length / 2.0 / 44100.0;
+                        double frequency = (zeroCrossings / 2.0) / durationSeconds;
+
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            TransferProgress = progress;
+                            OutputFrequency = frequency;
+
+                            string etaText = etaSeconds < 60
+                                ? $"{etaSeconds:F0}s"
+                                : $"{etaSeconds / 60:F1}m";
+
+                            TransferStatus = $"Sending {fileName}: Packet {currentPacket}/{totalPackets} - ETA: {etaText}";
+                        });
+
+                        _audioService.StartTransmitting(SelectedOutputDeviceIndex, audioSamples);
                         Thread.Sleep(audioSamples.Length / 44100 * 1000 + 100);
                     }
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        StatusMessage = "File transmission complete";
+                        StatusMessage = $"File sent: {fileName}";
+                        TransferStatus = $"Completed: {fileName} ({totalPackets} packets)";
+                        TransferProgress = 100;
                         IsTransmitting = false;
-                        OutputVolume = 0;
+                        IsTransferring = false;
+                        OutputFrequency = 1000; // Reset to minimum (far left)
                     });
                 });
             }
