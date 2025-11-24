@@ -69,6 +69,10 @@ namespace RadioDataApp.ViewModels
             _fileTransferService = new FileTransferService();
 
             _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
+            _fileTransferService.DebugMessage += (s, msg) =>
+            {
+                Application.Current.Dispatcher.Invoke(() => DebugLog += msg + "\n");
+            };
             _fileTransferService.FileReceived += (s, path) =>
             {
                 Application.Current.Dispatcher.Invoke(() =>

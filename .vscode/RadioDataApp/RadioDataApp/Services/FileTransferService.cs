@@ -21,6 +21,13 @@ namespace RadioDataApp.Services
 
         public event EventHandler<string>? FileReceived;
         public event EventHandler<double>? ProgressChanged;
+        public event EventHandler<string>? DebugMessage;
+
+        // Public state for debugging
+        public int ReceivedChunks => _receivedChunks;
+        public int ExpectedChunks => _expectedChunks;
+        public string CurrentFileName => _currentFileName;
+        public bool IsReceivingFile => _isReceivingFile;
 
         public List<byte[]> PrepareFileForTransmission(string filePath)
         {
@@ -76,7 +83,10 @@ namespace RadioDataApp.Services
                     _receivedChunks = 0;
                     _expectedChunks = (int)Math.Ceiling((double)_totalFileSize / MaxChunkSize);
 
-                    Console.WriteLine($"[FileTransfer] Starting receive: {_currentFileName} ({_totalFileSize} bytes)");
+                    string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}";
+                    DebugMessage?.Invoke(this, debugMsg);
+
+                    Console.WriteLine($"[FileTransfer] Starting receive: {_currentFileName} ({_totalFileSize} bytes, {_expectedChunks} chunks)");
                     ProgressChanged?.Invoke(this, 0);
                 }
                 catch (Exception ex)
@@ -100,6 +110,9 @@ namespace RadioDataApp.Services
 
                     double progress = (double)_receivedFileBuffer.Count / _totalFileSize;
                     ProgressChanged?.Invoke(this, progress);
+
+                    string debugMsg = $"Chunk {_receivedChunks}/{_expectedChunks} ({progress:P0})";
+                    DebugMessage?.Invoke(this, debugMsg);
 
                     Console.WriteLine($"[FileTransfer] Received chunk {seqId}. Progress: {progress:P0}");
 
