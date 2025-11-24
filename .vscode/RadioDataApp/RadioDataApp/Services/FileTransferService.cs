@@ -9,22 +9,22 @@ namespace RadioDataApp.Services
 {
     public class FileTransferService
     {
-        private const int MaxChunkSize = 200; // Payload size limit (255 - overhead)
+        private const int MaxChunkSize = 200; // Payload size limit
 
         // Receive State
         private bool _isReceivingFile;
         private string _currentFileName = "";
         private int _totalFileSize;
-        private List<byte> _receivedFileBuffer = [];
+        private byte[] _fileBuffer = []; // Fixed size buffer
+        private HashSet<int> _receivedChunkIds = []; // Track unique chunks
         private int _expectedChunks;
-        private int _receivedChunks;
 
         public event EventHandler<string>? FileReceived;
         public event EventHandler<double>? ProgressChanged;
         public event EventHandler<string>? DebugMessage;
 
         // Public state for debugging
-        public int ReceivedChunks => _receivedChunks;
+        public int ReceivedChunks => _receivedChunkIds.Count;
         public int ExpectedChunks => _expectedChunks;
         public string CurrentFileName => _currentFileName;
         public bool IsReceivingFile => _isReceivingFile;
@@ -78,9 +78,10 @@ namespace RadioDataApp.Services
                     _currentFileName = Encoding.ASCII.GetString(packet.Payload, 1, nameLen);
                     _totalFileSize = BitConverter.ToInt32(packet.Payload, 1 + nameLen);
 
-                    _receivedFileBuffer.Clear();
+                    // Initialize Buffer
+                    _fileBuffer = new byte[_totalFileSize];
+                    _receivedChunkIds.Clear();
                     _isReceivingFile = true;
-                    _receivedChunks = 0;
                     _expectedChunks = (int)Math.Ceiling((double)_totalFileSize / MaxChunkSize);
 
                     string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}";
@@ -104,21 +105,26 @@ namespace RadioDataApp.Services
                     byte[] data = new byte[packet.Payload.Length - 2];
                     Array.Copy(packet.Payload, 2, data, 0, data.Length);
 
-                    // Simple append (assuming in-order for now, robust implementation would use SeqID to place correctly)
-                    _receivedFileBuffer.AddRange(data);
-                    _receivedChunks++;
-
-                    double progress = (double)_receivedFileBuffer.Count / _totalFileSize;
-                    ProgressChanged?.Invoke(this, progress);
-
-                    string debugMsg = $"Chunk {_receivedChunks}/{_expectedChunks} ({progress:P0})";
-                    DebugMessage?.Invoke(this, debugMsg);
-
-                    Console.WriteLine($"[FileTransfer] Received chunk {seqId}. Progress: {progress:P0}");
-
-                    if (_receivedFileBuffer.Count >= _totalFileSize)
+                    // Place in correct position
+                    int offset = seqId * MaxChunkSize;
+                    if (offset + data.Length <= _fileBuffer.Length)
                     {
-                        FinishReception();
+                        Array.Copy(data, 0, _fileBuffer, offset, data.Length);
+
+                        if (_receivedChunkIds.Add(seqId)) // Only count if new
+                        {
+                            double progress = (double)_receivedChunkIds.Count / _expectedChunks;
+                            ProgressChanged?.Invoke(this, progress);
+
+                            string debugMsg = $"Chunk {seqId + 1}/{_expectedChunks} ({progress:P0})";
+                            DebugMessage?.Invoke(this, debugMsg);
+                            Console.WriteLine($"[FileTransfer] Received chunk {seqId}. Progress: {progress:P0}");
+
+                            if (_receivedChunkIds.Count >= _expectedChunks)
+                            {
+                                FinishReception();
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -140,7 +146,7 @@ namespace RadioDataApp.Services
                 savePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"Received_{counter++}_{_currentFileName}");
             }
 
-            File.WriteAllBytes(savePath, _receivedFileBuffer.ToArray());
+            File.WriteAllBytes(savePath, _fileBuffer);
             Console.WriteLine($"[FileTransfer] Saved to {savePath}");
             FileReceived?.Invoke(this, savePath);
             ProgressChanged?.Invoke(this, 1.0);

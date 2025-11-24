@@ -196,8 +196,8 @@ namespace RadioDataApp.ViewModels
             long fileSize = fileInfo.Length;
             int packetCount = (int)Math.Ceiling(fileSize / 200.0);
 
-            // Estimate time for 500 baud (double previous estimate)
-            double firstPacketTime = 6.8; // preamble + data + postamble + delay
+            // Estimate time for 500 baud
+            double firstPacketTime = 6.8;
             double otherPacketTime = 4.8;
             double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
@@ -218,7 +218,6 @@ namespace RadioDataApp.ViewModels
             string fileName = Path.GetFileName(dialog.FileName);
             StatusMessage = $"Sending: {fileName}";
 
-            // Debug header
             DebugLog += "\n=== SENDING FILE ===\n";
             DebugLog += $"File: {fileName}\n";
             DebugLog += $"Size: {fileSize / 1024.0:F1} KB\n";
@@ -229,28 +228,43 @@ namespace RadioDataApp.ViewModels
             Task.Run(() =>
             {
                 var packets = _fileTransferService.PrepareFileForTransmission(dialog.FileName);
-                var allAudio = new List<byte>();
                 int total = packets.Count;
+
+                // 1. Initialize continuous transmission
+                _audioService.InitializeTransmission(SelectedOutputDeviceIndex);
+
                 for (int i = 0; i < total; i++)
                 {
-                    bool preamble = i == 0; // only first packet includes VOX preamble
+                    // 2. Modulate packet (Preamble only on first)
+                    bool preamble = i == 0;
                     var audio = _modem.Modulate(packets[i], preamble);
-                    allAudio.AddRange(audio);
 
+                    // 3. Queue audio immediately
+                    _audioService.QueueAudio(audio);
+
+                    // 4. Update UI
                     double prog = (i + 1) / (double)total * 100;
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         TransferProgress = prog;
                         TransferStatus = $"Sending {fileName}: Packet {i + 1}/{total}";
                     });
+
+                    // Optional: Throttle loop slightly if generating faster than playback to avoid massive buffer growth (though 10min buffer is plenty)
+                    if (_audioService.GetBufferedDuration().TotalSeconds > 10)
+                    {
+                        Thread.Sleep(1000);
+                    }
                 }
 
-                // Transmit concatenated audio
-                _audioService.StartTransmitting(SelectedOutputDeviceIndex, allAudio.ToArray());
+                // 5. Wait for playback to finish
+                while (_audioService.GetBufferedDuration().TotalMilliseconds > 0)
+                {
+                    Thread.Sleep(100);
+                }
 
-                // Approximate wait for playback to finish
-                double totalSec = allAudio.Count / 2.0 / 44100.0;
-                Thread.Sleep((int)(totalSec * 1000) + 200);
+                // 6. Stop transmission
+                _audioService.StopTransmission();
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -261,7 +275,6 @@ namespace RadioDataApp.ViewModels
                     IsTransferring = false;
                     OutputFrequency = 1000;
                     DebugLog += "=== SEND COMPLETE ===\n";
-                    DebugLog += $"Total time: {totalSec:F1}s\n";
                     DebugLog += "====================\n\n";
                 });
             });
