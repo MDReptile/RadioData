@@ -105,7 +105,10 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private bool _isTransmitting;
 
-        private bool CanTransmit => !IsTransmitting;
+        [ObservableProperty]
+        private bool _isReceiving;
+
+        private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
         public MainViewModel()
         {
@@ -129,6 +132,11 @@ namespace RadioDataApp.ViewModels
                 DebugLog += "\n=== FILE RECEIVED ===\n";
                 DebugLog += $"Saved to: {path}\n";
                 DebugLog += "====================\n\n";
+                IsReceiving = false; // Reception complete
+            });
+            _fileTransferService.TimeoutOccurred += (s, msg) => Application.Current.Dispatcher.Invoke(() =>
+            {
+                IsReceiving = false; // Reception timed out
             });
 
             LoadDevices();
@@ -207,6 +215,7 @@ namespace RadioDataApp.ViewModels
                             break;
                         case CustomProtocol.PacketType.FileHeader:
                             DebugLog += "\n=== RECEIVING FILE ===\n";
+                            IsReceiving = true; // Disable transmission during reception
                             _fileTransferService.HandlePacket(packet);
                             break;
                         case CustomProtocol.PacketType.FileChunk:

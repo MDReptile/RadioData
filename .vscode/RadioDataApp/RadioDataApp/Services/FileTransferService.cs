@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Timers;
 using RadioDataApp.Modem;
 
 namespace RadioDataApp.Services
@@ -10,7 +11,11 @@ namespace RadioDataApp.Services
     public class FileTransferService
     {
         private const int MaxChunkSize = 200; // Payload size limit
+        private const double AvgPacketTimeSeconds = 2.5; // Average time per packet at 500 baud
+        private const double SilenceTimeoutSeconds = 10.0; // Timeout if no packets for 10s
+
         private readonly ImageCompressionService _imageCompressionService = new();
+        private readonly System.Timers.Timer _timeoutTimer;
 
         // Receive State
         private bool _isReceivingFile;
@@ -20,15 +25,66 @@ namespace RadioDataApp.Services
         private HashSet<int> _receivedChunkIds = []; // Track unique chunks
         private int _expectedChunks;
 
+        // Timeout tracking
+        private DateTime _receptionStartTime;
+        private DateTime _lastPacketTime;
+        private double _maxExpectedTimeSeconds;
+
         public event EventHandler<string>? FileReceived;
         public event EventHandler<double>? ProgressChanged;
         public event EventHandler<string>? DebugMessage;
+        public event EventHandler<string>? TimeoutOccurred;
 
         // Public state for debugging
         public int ReceivedChunks => _receivedChunkIds.Count;
         public int ExpectedChunks => _expectedChunks;
         public string CurrentFileName => _currentFileName;
         public bool IsReceivingFile => _isReceivingFile;
+
+        public FileTransferService()
+        {
+            // Initialize timeout timer (check every 2 seconds)
+            _timeoutTimer = new System.Timers.Timer(2000);
+            _timeoutTimer.Elapsed += OnTimeoutCheck;
+            _timeoutTimer.AutoReset = true;
+        }
+
+        private void OnTimeoutCheck(object? sender, ElapsedEventArgs e)
+        {
+            if (!_isReceivingFile)
+            {
+                _timeoutTimer.Stop();
+                return;
+            }
+
+            DateTime now = DateTime.Now;
+            double elapsedTotal = (now - _receptionStartTime).TotalSeconds;
+            double elapsedSinceLastPacket = (now - _lastPacketTime).TotalSeconds;
+
+            // Check 1: Max expected time exceeded
+            if (elapsedTotal > _maxExpectedTimeSeconds)
+            {
+                HandleTimeout($"Timeout: Expected completion in {_maxExpectedTimeSeconds:F1}s, but elapsed {elapsedTotal:F1}s");
+                return;
+            }
+
+            // Check 2: Silence detection (no packets for 10 seconds)
+            if (elapsedSinceLastPacket > SilenceTimeoutSeconds)
+            {
+                HandleTimeout($"Timeout: No packets received for {elapsedSinceLastPacket:F1}s (signal lost)");
+                return;
+            }
+        }
+
+        private void HandleTimeout(string message)
+        {
+            Console.WriteLine($"[FileTransfer] {message}");
+            _timeoutTimer.Stop();
+            _isReceivingFile = false;
+
+            TimeoutOccurred?.Invoke(this, message);
+            DebugMessage?.Invoke(this, $"\n=== {message} ===\nReceived {_receivedChunkIds.Count}/{_expectedChunks} chunks\n");
+        }
 
         public List<byte[]> PrepareFileForTransmission(string filePath)
         {
@@ -85,20 +141,30 @@ namespace RadioDataApp.Services
                     _isReceivingFile = true;
                     _expectedChunks = (int)Math.Ceiling((double)_totalFileSize / MaxChunkSize);
 
-                    string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}";
+                    // Initialize timeout tracking
+                    _receptionStartTime = DateTime.Now;
+                    _lastPacketTime = DateTime.Now;
+                    _maxExpectedTimeSeconds = _expectedChunks * AvgPacketTimeSeconds + 10; // Add 10s buffer
+                    _timeoutTimer.Start();
+
+                    string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}\nMax time: {_maxExpectedTimeSeconds:F1}s";
                     DebugMessage?.Invoke(this, debugMsg);
 
-                    Console.WriteLine($"[FileTransfer] Starting receive: {_currentFileName} ({_totalFileSize} bytes, {_expectedChunks} chunks)");
+                    Console.WriteLine($"[FileTransfer] Starting receive: {_currentFileName} ({_totalFileSize} bytes, {_expectedChunks} chunks, timeout: {_maxExpectedTimeSeconds:F1}s)");
                     ProgressChanged?.Invoke(this, 0);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[FileTransfer] Error parsing header: {ex.Message}");
                     _isReceivingFile = false;
+                    _timeoutTimer.Stop();
                 }
             }
             else if (packet.Type == CustomProtocol.PacketType.FileChunk && _isReceivingFile)
             {
+                // Update last packet time for silence detection
+                _lastPacketTime = DateTime.Now;
+
                 try
                 {
                     // Parse Chunk
@@ -139,6 +205,7 @@ namespace RadioDataApp.Services
         {
             Console.WriteLine($"[FileTransfer] FinishReception called. Chunks received: {_receivedChunkIds.Count}/{_expectedChunks}");
             _isReceivingFile = false;
+            _timeoutTimer.Stop(); // Stop timeout timer on successful completion
 
             string receiveDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReceivedFiles");
             Console.WriteLine($"[FileTransfer] Target directory: {receiveDir}");
