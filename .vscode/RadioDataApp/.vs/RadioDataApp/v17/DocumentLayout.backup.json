@@ -1,9 +1,13 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "G:\\GoogleAntigravityProjects\\RadioData\\.vscode\\RadioDataApp\\",
+  "WorkspaceRootPath": "C:\\Users\\MDR\\RadioData\\.vscode\\RadioDataApp\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\.vscode\\radiodataapp\\radiodataapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|c:\\users\\mdr\\radiodata\\.vscode\\radiodataapp\\radiodataapp\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|c:\\users\\mdr\\radiodata\\.vscode\\radiodataapp\\radiodataapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -19,15 +23,26 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\MDR\\RadioData\\.vscode\\RadioDataApp\\RadioDataApp\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "RadioDataApp\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\MDR\\RadioData\\.vscode\\RadioDataApp\\RadioDataApp\\MainWindow.xaml",
+              "RelativeToolTip": "RadioDataApp\\MainWindow.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-11-24T01:39:51.717Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml.cs",
-              "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\.vscode\\RadioDataApp\\RadioDataApp\\MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\MDR\\RadioData\\.vscode\\RadioDataApp\\RadioDataApp\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "RadioDataApp\\MainWindow.xaml.cs",
-              "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\.vscode\\RadioDataApp\\RadioDataApp\\MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\MDR\\RadioData\\.vscode\\RadioDataApp\\RadioDataApp\\MainWindow.xaml.cs",
               "RelativeToolTip": "RadioDataApp\\MainWindow.xaml.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-24T01:39:47.501Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-24T01:39:47.501Z"
             }
           ]
         }
