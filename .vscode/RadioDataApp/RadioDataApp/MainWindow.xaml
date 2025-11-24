@@ -1,0 +1,73 @@
+<Window x:Class="RadioDataApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:RadioDataApp"
+        xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
+        mc:Ignorable="d"
+        Title="RadioData" Height="450" Width="800"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}">
+    
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <materialDesign:ColorZone Mode="PrimaryMid" Padding="16">
+            <DockPanel>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="22">RadioData</TextBlock>
+            </DockPanel>
+        </materialDesign:ColorZone>
+
+        <StackPanel Grid.Row="1" Margin="20">
+            <GroupBox Header="Audio Settings" Style="{DynamicResource MaterialDesignCardGroupBox}" Margin="0,0,0,10">
+                <StackPanel Margin="10">
+                    <ComboBox materialDesign:HintAssist.Hint="Input Device" 
+                              ItemsSource="{Binding InputDevices}" 
+                              SelectedIndex="{Binding SelectedInputDeviceIndex}"
+                              Margin="0,0,0,10"/>
+                    <ComboBox materialDesign:HintAssist.Hint="Output Device" 
+                              ItemsSource="{Binding OutputDevices}" 
+                              SelectedIndex="{Binding SelectedOutputDeviceIndex}"/>
+                    
+                    <TextBlock Text="Input Level" Margin="0,10,0,5"/>
+                    <ProgressBar Value="{Binding InputVolume}" Maximum="100" Height="10" />
+                </StackPanel>
+            </GroupBox>
+
+            <Button Command="{Binding StartTransmissionCommand}" 
+                    Content="TRANSMIT TEST (Hello World)" 
+                    Style="{DynamicResource MaterialDesignRaisedButton}"
+                    Height="50" Margin="0,0,0,10"/>
+            
+            <Button Command="{Binding StartTestToneCommand}" 
+                    Content="PLAY 5s TUNING TONE" 
+                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                    Height="50" Margin="0,0,0,10"/>
+
+            <GroupBox Header="Debug Log" Style="{DynamicResource MaterialDesignCardGroupBox}" Height="150">
+                <ScrollViewer>
+                    <TextBlock Text="{Binding DebugLog}" TextWrapping="Wrap" FontFamily="Consolas"/>
+                </ScrollViewer>
+            </GroupBox>
+        </StackPanel>
+
+        <StatusBar Grid.Row="2" Background="{DynamicResource MaterialDesignCardBackground}">
+            <TextBlock Text="{Binding StatusMessage}" Margin="10,0"/>
+        </StatusBar>
+    </Grid>
+</Window>
