@@ -76,8 +76,8 @@ namespace RadioDataApp.Modem
 
             for (int i = 0; i < sampleCount; i++)
             {
-                // Scale amplitude to 12.5% to reduce volume
-                short sample = (short)(Math.Sin(_phase) * short.MaxValue * 0.125);
+                // Scale amplitude to 25% for radio VOX triggering
+                short sample = (short)(Math.Sin(_phase) * short.MaxValue * 0.25);
                 byte[] bytes = BitConverter.GetBytes(sample);
                 buffer.Add(bytes[0]);
                 buffer.Add(bytes[1]);

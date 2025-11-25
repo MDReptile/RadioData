@@ -214,13 +214,9 @@ namespace RadioDataApp.ViewModels
             for (int i = 0; i < outputs.Count; i++)
                 OutputDevices.Add($"{i + 1}: {outputs[i].ProductName}");
 
-            // Default to loopback
-            if (InputDevices.Count > 0) SelectedInputDeviceIndex = 0;
-            if (OutputDevices.Count > 0) SelectedOutputDeviceIndex = 0;
-
-            // Explicitly enable loopback mode (in case property change doesn't fire)
-            _audioService.IsLoopbackMode = true;
-            StatusMessage = "Loopback mode (software)";
+            // Default to first real device (index 1 = first hardware device)
+            if (InputDevices.Count > 1) SelectedInputDeviceIndex = 1;
+            if (OutputDevices.Count > 1) SelectedOutputDeviceIndex = 1;
 
             _audioService.AudioDataReceived += OnAudioDataReceived;
             _audioService.TransmissionCompleted += (s, e) =>
