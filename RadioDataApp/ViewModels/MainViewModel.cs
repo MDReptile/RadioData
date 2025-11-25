@@ -245,6 +245,9 @@ namespace RadioDataApp.ViewModels
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
+        // Debug flag for raw byte logging (set to true to enable)
+        private const bool EnableRawByteLogging = false;
+
         public MainViewModel()
         {
             _audioService = new AudioService();
@@ -293,14 +296,17 @@ namespace RadioDataApp.ViewModels
                 DebugLog += $"[TIMEOUT] {msg}\n";
             });
 
-            // Hook up raw byte logging for debugging
-            _modem.RawByteReceived += (s, b) => Application.Current.Dispatcher.Invoke(() =>
+            // Hook up raw byte logging for debugging (optional)
+            if (EnableRawByteLogging)
             {
-                // Only log printable characters or hex for control chars
-                char c = (char)b;
-                string display = (c >= 32 && c <= 126) ? c.ToString() : $"[{b:X2}]";
-                DebugLog += display;
-            });
+                _modem.RawByteReceived += (s, b) => Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Log each byte on its own line for clarity
+                    char c = (char)b;
+                    string display = (c >= 32 && c <= 126) ? $"'{c}'" : $"[{b:X2}]";
+                    DebugLog += $"[RAW BYTE] {display}\n";
+                });
+            }
 
             // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
