@@ -1,9 +1,27 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36717.8 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioDataApp", "RadioDataApp\RadioDataApp.csproj", "{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		AudioLoopbackTest_Implementation.md = AudioLoopbackTest_Implementation.md
+		CHANGES_APPLIED.md = CHANGES_APPLIED.md
+		FIX_SUMMARY.md = FIX_SUMMARY.md
+		icon.png = icon.png
+		ISSUES_AND_FIXES.md = ISSUES_AND_FIXES.md
+		QUICK_FIX.md = QUICK_FIX.md
+		README.md = README.md
+		screenshot.png = screenshot.png
+		SETTINGS_PERSISTENCE.md = SETTINGS_PERSISTENCE.md
+		smiley.png = smiley.png
+		SQUELCH_FIX.md = SQUELCH_FIX.md
+		tiny_smiley.png = tiny_smiley.png
+		TOOLTIPS_ADDED.md = TOOLTIPS_ADDED.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
