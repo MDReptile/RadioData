@@ -27,7 +27,12 @@ namespace RadioDataApp.Modem
         // Modulation State
         private double _phase = 0;
 
-        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 3000)
+        // Event for raw byte debugging
+        public event EventHandler<byte>? RawByteReceived;
+
+        private List<byte> _byteBuffer = [];
+
+        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1200)
         {
             List<byte> samples = [];
             _phase = 0; // Reset phase for new transmission
@@ -86,8 +91,6 @@ namespace RadioDataApp.Modem
             }
         }
 
-        private List<byte> _byteBuffer = [];
-
         public CustomProtocol.DecodedPacket? Demodulate(byte[] audioBytes)
         {
             List<byte> newBytes = [];
@@ -102,7 +105,9 @@ namespace RadioDataApp.Modem
                 char? decodedChar = ProcessUartState();
                 if (decodedChar.HasValue)
                 {
-                    newBytes.Add((byte)decodedChar.Value);
+                    byte b = (byte)decodedChar.Value;
+                    newBytes.Add(b);
+                    RawByteReceived?.Invoke(this, b);
                 }
             }
 

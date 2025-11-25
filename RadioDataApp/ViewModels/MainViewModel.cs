@@ -179,37 +179,6 @@ namespace RadioDataApp.ViewModels
             // Load saved settings
             var settings = _settingsService.LoadSettings();
             _encryptionKey = settings.EncryptionKey;
-            CustomProtocol.EncryptionKey = _encryptionKey;
-            Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
-
-            // Wire up service events
-            _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
-            _fileTransferService.DebugMessage += (s, msg) => Application.Current.Dispatcher.Invoke(() => DebugLog += msg + "\n");
-            _fileTransferService.FileReceived += (s, path) => Application.Current.Dispatcher.Invoke(() =>
-            {
-                DebugLog += "\n=== FILE RECEIVED ===\n";
-                DebugLog += $"Saved to: {path}\n";
-                DebugLog += "====================\n\n";
-                IsReceiving = false; // Reception complete
-            });
-            _fileTransferService.TimeoutOccurred += (s, msg) => Application.Current.Dispatcher.Invoke(() =>
-            {
-                IsReceiving = false; // Reception timed out
-            });
-
-            LoadDevices();
-        }
-
-        private void LoadDevices()
-        {
-            // Add loopback option as first item
-            InputDevices.Add("0: Loopback (Software)");
-            OutputDevices.Add("0: Loopback (Software)");
-
-            var inputs = AudioService.GetInputDevices();
-            for (int i = 0; i < inputs.Count; i++)
-                InputDevices.Add($"{i + 1}: {inputs[i].ProductName}");
-
             var outputs = AudioService.GetOutputDevices();
             for (int i = 0; i < outputs.Count; i++)
                 OutputDevices.Add($"{i + 1}: {outputs[i].ProductName}");
@@ -499,9 +468,9 @@ namespace RadioDataApp.ViewModels
 
                     for (int i = 0; i < total; i++)
                     {
-                        // 2. Modulate packet (Preamble only on first, 3s for radio VOX)
+                        // 2. Modulate packet (Preamble only on first, 1.2s for radio VOX)
                         bool preamble = i == 0;
-                        int preambleDuration = preamble ? 3000 : 0; // 3 seconds for file header
+                        int preambleDuration = preamble ? 1200 : 0; // 1.2 seconds for file header
                         var audio = _modem.Modulate(packets[i], preamble, preambleDuration);
 
                         // 3. Queue audio immediately
