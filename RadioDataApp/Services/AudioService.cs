@@ -87,6 +87,19 @@ namespace RadioDataApp.Services
                 return;
             }
 
+            Console.WriteLine($"[AudioService] InitializeTransmission called with device index: {deviceNumber}");
+
+            // Show what device this actually is
+            var outputs = GetOutputDevices();
+            if (deviceNumber >= 0 && deviceNumber < outputs.Count)
+            {
+                Console.WriteLine($"[AudioService] Opening output device: {outputs[deviceNumber].ProductName}");
+            }
+            else
+            {
+                Console.WriteLine($"[AudioService] ERROR: Device index {deviceNumber} out of range (0-{outputs.Count - 1})");
+            }
+
             StopTransmission(); // Ensure clean state
 
             _waveOut = new WaveOutEvent

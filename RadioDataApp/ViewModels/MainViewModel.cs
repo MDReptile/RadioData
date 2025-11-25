@@ -34,23 +34,38 @@ namespace RadioDataApp.ViewModels
 
         partial void OnSelectedInputDeviceIndexChanged(int value)
         {
+            Console.WriteLine($"[DeviceSelection] Input device changed to index {value}");
+            DebugLog += $"[DeviceSelection] Input index: {value}\n";
+
             // Index 0 is loopback
             if (value == 0)
             {
                 _audioService.IsLoopbackMode = true;
                 StatusMessage = "Loopback mode (software)";
+                Console.WriteLine($"[DeviceSelection] Loopback mode enabled");
+                DebugLog += "[DeviceSelection] Loopback mode enabled\n";
                 return;
             }
 
             _audioService.IsLoopbackMode = false;
             try
             {
-                _audioService.StartListening(value - 1); // Adjust for loopback offset
-                StatusMessage = $"Listening on device {value - 1}";
+                int realDeviceIndex = value - 1;
+                var inputs = AudioService.GetInputDevices();
+                if (realDeviceIndex >= 0 && realDeviceIndex < inputs.Count)
+                {
+                    string deviceName = inputs[realDeviceIndex].ProductName;
+                    Console.WriteLine($"[DeviceSelection] Input device {realDeviceIndex}: {deviceName}");
+                    DebugLog += $"[DeviceSelection] Input device {realDeviceIndex}: {deviceName}\n";
+                }
+
+                _audioService.StartListening(realDeviceIndex); // Adjust for loopback offset
+                StatusMessage = $"Listening on device {realDeviceIndex}";
             }
             catch (System.Exception ex)
             {
                 StatusMessage = $"Error listening: {ex.Message}";
+                DebugLog += $"[ERROR] Listen failed: {ex.Message}\n";
             }
         }
 
@@ -59,15 +74,35 @@ namespace RadioDataApp.ViewModels
 
         partial void OnSelectedOutputDeviceIndexChanged(int value)
         {
+            Console.WriteLine($"[DeviceSelection] Output device changed to index {value}");
+            DebugLog += $"[DeviceSelection] Output index: {value}\n";
+
             // Index 0 is loopback  
             if (value == 0)
             {
                 _audioService.IsLoopbackMode = true;
                 StatusMessage = "Loopback mode (software)";
+                Console.WriteLine($"[DeviceSelection] Loopback mode enabled");
+                DebugLog += "[DeviceSelection] Loopback mode enabled\n";
             }
             else
             {
                 _audioService.IsLoopbackMode = false;
+                // Show what real device this maps to
+                var outputs = AudioService.GetOutputDevices();
+                int realDeviceIndex = value - 1;
+                if (realDeviceIndex >= 0 && realDeviceIndex < outputs.Count)
+                {
+                    string deviceName = outputs[realDeviceIndex].ProductName;
+                    StatusMessage = $"Output: {deviceName}";
+                    Console.WriteLine($"[DeviceSelection] Real device index {realDeviceIndex}: {deviceName}");
+                    DebugLog += $"[DeviceSelection] Device {realDeviceIndex}: {deviceName}\n";
+                }
+                else
+                {
+                    Console.WriteLine($"[DeviceSelection] ERROR: Real device index {realDeviceIndex} out of range (max {outputs.Count - 1})");
+                    DebugLog += $"[ERROR] Device index {realDeviceIndex} out of range!\n";
+                }
             }
         }
 
