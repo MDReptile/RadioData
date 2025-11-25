@@ -39,7 +39,7 @@ namespace RadioDataApp
         {
             if (e.PropertyName == nameof(MainViewModel.DebugLog))
             {
-                // Auto-scroll to bottom when DebugLog changes
+                // Auto-scroll to bottom when DebugLog changes 
                 Dispatcher.InvokeAsync(() =>
                 {
                     LogScrollViewer?.ScrollToBottom();

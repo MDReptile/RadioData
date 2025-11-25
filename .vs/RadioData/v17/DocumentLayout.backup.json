@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "G:\\GoogleAntigravityProjects\\RadioData\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\ViewModels\\MainViewModel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:RadioDataApp\\ViewModels\\MainViewModel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|G:\\GoogleAntigravityProjects\\RadioData\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
@@ -22,11 +26,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
+              "Title": "MainViewModel.cs",
+              "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\ViewModels\\MainViewModel.cs",
+              "RelativeDocumentMoniker": "RadioDataApp\\ViewModels\\MainViewModel.cs",
+              "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\ViewModels\\MainViewModel.cs",
+              "RelativeToolTip": "RadioDataApp\\ViewModels\\MainViewModel.cs",
+              "ViewState": "AgIAAGUBAAAAAAAAAAAAAHABAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-25T04:18:53.34Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "RadioDataApp.csproj.user",
               "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\RadioDataApp.csproj.user",
               "RelativeDocumentMoniker": "RadioDataApp\\RadioDataApp.csproj.user",
@@ -39,7 +56,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "RadioDataApp.csproj",
               "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\RadioDataApp.csproj",
               "RelativeDocumentMoniker": "RadioDataApp\\RadioDataApp.csproj",
@@ -52,7 +69,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": ".gitignore",
               "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\.gitignore",
               "RelativeDocumentMoniker": ".gitignore",
