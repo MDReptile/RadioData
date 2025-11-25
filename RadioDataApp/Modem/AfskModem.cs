@@ -7,7 +7,7 @@ namespace RadioDataApp.Modem
     public class AfskModem
     {
         private const int SampleRate = 44100;
-        private const int BaudRate = 500; // Reduced for reliability
+        private const int BaudRate = 250; // Reduced to 250 for maximum reliability
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
@@ -27,7 +27,7 @@ namespace RadioDataApp.Modem
         // Modulation State
         private double _phase = 0;
 
-        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1250)
+        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 3000)
         {
             List<byte> samples = [];
             _phase = 0; // Reset phase for new transmission

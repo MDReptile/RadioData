@@ -221,15 +221,18 @@ namespace RadioDataApp.ViewModels
             _audioService.AudioDataReceived += OnAudioDataReceived;
             _audioService.TransmissionCompleted += (s, e) =>
             {
-                _visualizationCts?.Cancel();
+                // Don't cancel visualization here - let it finish naturally
+                // _visualizationCts?.Cancel(); 
+
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     if (!IsTransferring)
                     {
                         StatusMessage = "Transmission Complete";
                         IsTransmitting = false;
-                        OutputFrequency = 0;
-                        OutputVolume = 0;
+                        // Don't reset meters immediately, let visualization finish
+                        // OutputFrequency = 0;
+                        // OutputVolume = 0;
                     }
                 });
             };
@@ -496,9 +499,9 @@ namespace RadioDataApp.ViewModels
 
                     for (int i = 0; i < total; i++)
                     {
-                        // 2. Modulate packet (Preamble only on first, 2.5s for radio VOX)
+                        // 2. Modulate packet (Preamble only on first, 3s for radio VOX)
                         bool preamble = i == 0;
-                        int preambleDuration = preamble ? 2500 : 0; // 2.5 seconds for file header
+                        int preambleDuration = preamble ? 3000 : 0; // 3 seconds for file header
                         var audio = _modem.Modulate(packets[i], preamble, preambleDuration);
 
                         // 3. Queue audio immediately

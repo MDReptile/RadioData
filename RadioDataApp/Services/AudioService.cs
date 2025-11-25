@@ -100,7 +100,11 @@ namespace RadioDataApp.Services
                 Console.WriteLine($"[AudioService] ERROR: Device index {deviceNumber} out of range (0-{outputs.Count - 1})");
             }
 
-            StopTransmission(); // Ensure clean state
+            // Only stop if not already playing - prevents cutting off active transmission
+            if (_waveOut == null || _waveOut.PlaybackState != PlaybackState.Playing)
+            {
+                StopTransmission(); // Ensure clean state
+            }
 
             _waveOut = new WaveOutEvent
             {
