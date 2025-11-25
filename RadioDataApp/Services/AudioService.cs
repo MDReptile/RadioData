@@ -1,8 +1,13 @@
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type
+#pragma warning disable CS8601 // Possible null reference assignment
+#pragma warning disable CS8602 // Dereference of a possibly null reference
+#pragma warning disable CS8603 // Possible null reference return
+#pragma warning disable CS8604 // Possible null reference argument
+
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 
 namespace RadioDataApp.Services
 {
@@ -73,10 +78,13 @@ namespace RadioDataApp.Services
         {
             byte[] buffer = new byte[e.BytesRecorded];
             Array.Copy(e.Buffer, buffer, e.BytesRecorded);
-            AudioDataReceived?.Invoke(this, buffer);
-        }
 
-        // --- Transmission Logic ---
+            var handler = AudioDataReceived;
+            if (handler != null)
+            {
+                handler(this, buffer);
+            }
+        }
 
         public void InitializeTransmission(int deviceNumber)
         {
@@ -86,22 +94,20 @@ namespace RadioDataApp.Services
                 return;
             }
 
-            Console.WriteLine($"[AudioService] InitializeTransmission called with device index: {deviceNumber}");
+            Console.WriteLine("[AudioService] InitializeTransmission called with device index: " + deviceNumber);
 
             var outputs = GetOutputDevices();
             if (deviceNumber >= 0 && deviceNumber < outputs.Count)
             {
-                Console.WriteLine($"[AudioService] Opening output device: {outputs[deviceNumber].ProductName}");
+                Console.WriteLine("[AudioService] Opening output device: " + outputs[deviceNumber].ProductName);
             }
             else
             {
-                Console.WriteLine($"[AudioService] ERROR: Device index {deviceNumber} out of range (0-{outputs.Count - 1})");
+                Console.WriteLine("[AudioService] ERROR: Device index " + deviceNumber + " out of range (0-" + (outputs.Count - 1) + ")");
             }
 
-            if (_waveOut == null || _waveOut.PlaybackState != PlaybackState.Playing)
-            {
-                StopTransmission();
-            }
+            // Always stop previous transmission to ensure clean state
+            StopTransmission();
 
             _waveOut = new WaveOutEvent
             {
@@ -116,24 +122,35 @@ namespace RadioDataApp.Services
 
             _waveOut.Init(_bufferedWaveProvider);
             _waveOut.Play();
-            Console.WriteLine($"[AudioService] Started playback on device {deviceNumber}");
+            Console.WriteLine("[AudioService] Started playback on device " + deviceNumber);
         }
 
         public void QueueAudio(byte[] audioData)
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine($"[AudioService] Output loopback mode - queuing {audioData.Length} bytes to demodulator");
-                AudioDataReceived?.Invoke(this, audioData);
+                Console.WriteLine("[AudioService] Output loopback mode - queuing " + audioData.Length + " bytes to demodulator");
+                var handler = AudioDataReceived;
+                if (handler != null)
+                {
+                    handler(this, audioData);
+                }
                 return;
             }
 
-            _bufferedWaveProvider?.AddSamples(audioData, 0, audioData.Length);
+            if (_bufferedWaveProvider != null)
+            {
+                _bufferedWaveProvider.AddSamples(audioData, 0, audioData.Length);
+            }
         }
 
         public TimeSpan GetBufferedDuration()
         {
-            return _bufferedWaveProvider?.BufferedDuration ?? TimeSpan.Zero;
+            if (_bufferedWaveProvider != null)
+            {
+                return _bufferedWaveProvider.BufferedDuration;
+            }
+            return TimeSpan.Zero;
         }
 
         public void StopTransmission()
@@ -141,7 +158,11 @@ namespace RadioDataApp.Services
             if (IsOutputLoopbackMode)
             {
                 Console.WriteLine("[AudioService] Output loopback mode - StopTransmission");
-                TransmissionCompleted?.Invoke(this, EventArgs.Empty);
+                var handler = TransmissionCompleted;
+                if (handler != null)
+                {
+                    handler(this, EventArgs.Empty);
+                }
                 return;
             }
 
@@ -152,36 +173,34 @@ namespace RadioDataApp.Services
                 _waveOut = null;
             }
             _bufferedWaveProvider = null;
-            TransmissionCompleted?.Invoke(this, EventArgs.Empty);
+
+            var txHandler = TransmissionCompleted;
+            if (txHandler != null)
+            {
+                txHandler(this, EventArgs.Empty);
+            }
         }
 
-        // Legacy method for single-shot transmission (kept for compatibility)
         public void StartTransmitting(int deviceNumber, byte[] audioData)
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine($"[AudioService] Output loopback mode - feeding {audioData.Length} bytes to demodulator");
-                AudioDataReceived?.Invoke(this, audioData);
-
-                Task.Run(async () =>
+                Console.WriteLine("[AudioService] Output loopback mode - feeding " + audioData.Length + " bytes to demodulator");
+                var rxHandler = AudioDataReceived;
+                if (rxHandler != null)
                 {
-                    await Task.Delay(100);
-                    TransmissionCompleted?.Invoke(this, EventArgs.Empty);
-                });
+                    rxHandler(this, audioData);
+                }
+                var txHandler = TransmissionCompleted;
+                if (txHandler != null)
+                {
+                    txHandler(this, EventArgs.Empty);
+                }
                 return;
             }
 
             InitializeTransmission(deviceNumber);
             QueueAudio(audioData);
-
-            new Thread(() =>
-            {
-                while (_bufferedWaveProvider != null && _bufferedWaveProvider.BufferedDuration.TotalMilliseconds > 0)
-                {
-                    Thread.Sleep(100);
-                }
-                StopTransmission();
-            }).Start();
         }
 
         public void Dispose()

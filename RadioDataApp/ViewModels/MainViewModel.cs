@@ -7,11 +7,9 @@ using System.Windows;
 using System.IO;
 using NAudio.Wave;
 using Microsoft.Win32;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System;
-using System.Linq;
+using System.Windows.Threading;
 
 namespace RadioDataApp.ViewModels
 {
@@ -229,7 +227,7 @@ namespace RadioDataApp.ViewModels
             // Notify UI that CanTransmit status may have changed
             StartTransmissionCommand.NotifyCanExecuteChanged();
             SendFileCommand.NotifyCanExecuteChanged();
-            
+
             // Update status message
             if (value)
             {
@@ -241,8 +239,8 @@ namespace RadioDataApp.ViewModels
             }
         }
 
-        private CancellationTokenSource? _receiveSilenceTimeout;
-        private CancellationTokenSource? _transmissionCooldown;
+
+        private DispatcherTimer? _silenceTimer;
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
@@ -265,13 +263,13 @@ namespace RadioDataApp.ViewModels
             _startBitCompensation = settings.StartBitCompensation;
             _squelchThreshold = settings.SquelchThreshold;
             _compressImages = settings.CompressImages;
-            
+
             CustomProtocol.EncryptionKey = _encryptionKey;
             _modem.InputGain = (float)_inputGain;
             _modem.ZeroCrossingThreshold = _zeroCrossingThreshold;
             _modem.StartBitCompensation = _startBitCompensation;
             _modem.SquelchThreshold = (float)_squelchThreshold;
-            
+
             Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
             Console.WriteLine($"[Settings] Loaded input gain: {_inputGain}x");
             Console.WriteLine($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
@@ -280,96 +278,44 @@ namespace RadioDataApp.ViewModels
             Console.WriteLine($"[Settings] Loaded compress images: {_compressImages}");
 
             // Wire up service events
-            _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
-            _fileTransferService.DebugMessage += (s, msg) => Application.Current.Dispatcher.Invoke(() => DebugLog += msg + "\n");
-            _fileTransferService.FileReceived += (s, path) => Application.Current.Dispatcher.Invoke(() =>
-            {
-                StatusMessage = $"File received: {Path.GetFileName(path)}";
-                TransferStatus = "Receive Complete";
-                IsReceiving = false;
-                IsTransferring = false;
-                DebugLog += $"[FILE] Saved to: {path}\n";
-            });
-            _fileTransferService.TimeoutOccurred += (s, msg) => Application.Current.Dispatcher.Invoke(() =>
-            {
-                IsReceiving = false;
-                IsTransferring = false;
-                DebugLog += $"[TIMEOUT] {msg}\n";
-            });
+            _fileTransferService.ProgressChanged += OnFileTransferProgressChanged;
+            _fileTransferService.DebugMessage += OnFileTransferDebugMessage;
+            _fileTransferService.FileReceived += OnFileReceived;
+            _fileTransferService.TimeoutOccurred += OnFileTransferTimeout;
 
             // Hook up raw byte logging for debugging (optional)
             if (EnableRawByteLogging)
             {
-                _modem.RawByteReceived += (s, b) => Application.Current.Dispatcher.Invoke(() =>
-                {
-                    // Log each byte on its own line for clarity
-                    char c = (char)b;
-                    string display = (c >= 32 && c <= 126) ? $"'{c}'" : $"[{b:X2}]";
-                    DebugLog += $"[RAW BYTE] {display}\n";
-                });
+                _modem.RawByteReceived += OnRawByteReceived;
             }
 
             // Hook up RMS level logging for signal diagnostics
-            _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
-            {
-                // Only warn if signal is too strong (causes distortion)
-                if (rms > 0.15f)
-                {
-                    DebugLog += $"[⚠ SIGNAL TOO STRONG: {rms:F3}] Reduce input gain or system volume!\n";
-                }
-            });
+            _modem.RmsLevelDetected += OnRmsLevelDetected;
 
-            // Hook up checksum failure detection (now accurate!)
-            _modem.ChecksumFailed += (s, e) => Application.Current.Dispatcher.Invoke(() =>
-            {
-                DebugLog += $"\n[CHECKSUM FAIL] Packet corrupted!\n";
-            });
+            // Hook up checksum failure detection
+            _modem.ChecksumFailed += OnChecksumFailed;
 
+            // Hook up AudioService events
             _audioService.AudioDataReceived += OnAudioDataReceived;
-            _audioService.TransmissionCompleted += (s, e) =>
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    if (!IsTransferring)
-                    {
-                        StatusMessage = "Transmission Complete";
-                        
-                        // Enforce minimum cooldown period (500ms) before allowing next transmission
-                        _transmissionCooldown?.Cancel();
-                        _transmissionCooldown = new CancellationTokenSource();
-                        var token = _transmissionCooldown.Token;
-                        
-                        Task.Run(async () =>
-                        {
-                            await Task.Delay(500, token); // 500ms minimum cooldown
-                            if (!token.IsCancellationRequested)
-                            {
-                                Application.Current.Dispatcher.Invoke(() =>
-                                {
-                                    IsTransmitting = false;
-                                });
-                            }
-                        }, token);
-                    }
-                });
-            };
+
+
 
             LoadDevices();
-            
+
             // Load and apply saved device selections after devices are loaded
             _selectedInputDeviceIndex = settings.SelectedInputDeviceIndex;
             _selectedOutputDeviceIndex = settings.SelectedOutputDeviceIndex;
-            
+
             // Validate that saved indices are still valid
             if (_selectedInputDeviceIndex >= InputDevices.Count)
                 _selectedInputDeviceIndex = InputDevices.Count > 1 ? 1 : 0;
             if (_selectedOutputDeviceIndex >= OutputDevices.Count)
                 _selectedOutputDeviceIndex = OutputDevices.Count > 1 ? 1 : 0;
-                
+
             // Trigger the device selection handlers
             OnSelectedInputDeviceIndexChanged(_selectedInputDeviceIndex);
             OnSelectedOutputDeviceIndexChanged(_selectedOutputDeviceIndex);
-            
+
             Console.WriteLine($"[Settings] Loaded input device index: {_selectedInputDeviceIndex}");
             Console.WriteLine($"[Settings] Loaded output device index: {_selectedOutputDeviceIndex}");
         }
@@ -412,6 +358,72 @@ namespace RadioDataApp.ViewModels
             _settingsService.SaveSettings(settings);
         }
 
+        private void OnFileTransferProgressChanged(object? sender, double progress)
+        {
+            TransferProgress = progress * 100;
+        }
+
+        private void OnFileTransferDebugMessage(object? sender, string message)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                DebugLog += message + "\n";
+            });
+        }
+
+        private void OnFileReceived(object? sender, string path)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                StatusMessage = "File received: " + Path.GetFileName(path);
+                TransferStatus = "Receive Complete";
+                IsReceiving = false;
+                IsTransferring = false;
+                DebugLog += "[FILE] Saved to: " + path + "\n";
+            });
+        }
+
+        private void OnFileTransferTimeout(object? sender, string message)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                IsReceiving = false;
+                IsTransferring = false;
+                DebugLog += "[TIMEOUT] " + message + "\n";
+            });
+        }
+
+        private void OnRawByteReceived(object? sender, byte b)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                char c = (char)b;
+                string display = (c >= 32 && c <= 126) ? "'" + c + "'" : "[" + b.ToString("X2") + "]";
+                DebugLog += "[RAW BYTE] " + display + "\n";
+            });
+        }
+
+        private void OnRmsLevelDetected(object? sender, float rms)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (rms > 0.15f)
+                {
+                    DebugLog += "[⚠ SIGNAL TOO STRONG: " + rms.ToString("F3") + "] Reduce input gain or system volume!\n";
+                }
+            });
+        }
+
+        private void OnChecksumFailed(object? sender, EventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                DebugLog += "\n[CHECKSUM FAIL] Packet corrupted!\n";
+            });
+        }
+
+
+
         private void OnAudioDataReceived(object? sender, byte[] audioData)
         {
             Application.Current.Dispatcher.Invoke(() =>
@@ -453,26 +465,24 @@ namespace RadioDataApp.ViewModels
                         IsReceiving = true;
                     }
 
-                    // Cancel any existing silence timeout
-                    _receiveSilenceTimeout?.Cancel();
-                    
-                    // Start new silence timeout (2 seconds)
-                    _receiveSilenceTimeout = new CancellationTokenSource();
-                    var token = _receiveSilenceTimeout.Token;
-                    Task.Run(async () =>
+                    // Initialize silence timer if needed
+                    if (_silenceTimer == null)
                     {
-                        await Task.Delay(2000, token);
-                        if (!token.IsCancellationRequested)
+                        _silenceTimer = new DispatcherTimer();
+                        _silenceTimer.Interval = TimeSpan.FromSeconds(2);
+                        _silenceTimer.Tick += (s, args) =>
                         {
-                            Application.Current.Dispatcher.Invoke(() =>
+                            if (!IsTransferring)
                             {
-                                if (!IsTransferring)
-                                {
-                                    IsReceiving = false;
-                                }
-                            });
-                        }
-                    }, token);
+                                IsReceiving = false;
+                            }
+                            _silenceTimer.Stop();
+                        };
+                    }
+
+                    // Reset silence timer
+                    _silenceTimer.Stop();
+                    _silenceTimer.Start();
                 }
 
                 // 3. Demodulate
@@ -536,6 +546,8 @@ namespace RadioDataApp.ViewModels
             }
         }
 
+        private DispatcherTimer? _transmissionMonitorTimer;
+
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void StartTransmission()
         {
@@ -555,48 +567,69 @@ namespace RadioDataApp.ViewModels
             _audioService.StartTransmitting(deviceIndex, audioSamples);
 
             MessageToSend = string.Empty; // Clear input
+
+            // Monitor buffer to reset IsTransmitting when done
+            _transmissionMonitorTimer?.Stop();
+            _transmissionMonitorTimer = new DispatcherTimer();
+            _transmissionMonitorTimer.Interval = TimeSpan.FromMilliseconds(100);
+
+            bool hasStartedPlaying = false;
+
+            _transmissionMonitorTimer.Tick += (s, e) =>
+            {
+                var duration = _audioService.GetBufferedDuration().TotalSeconds;
+
+                if (duration > 0)
+                {
+                    hasStartedPlaying = true;
+                }
+
+                if (hasStartedPlaying && duration < 0.1)
+                {
+                    _transmissionMonitorTimer.Stop();
+                    IsTransmitting = false;
+                    StatusMessage = "Ready";
+                }
+            };
+            _transmissionMonitorTimer.Start();
         }
 
-        private CancellationTokenSource? _visualizationCts;
+        private DispatcherTimer? _visualizationTimer;
 
         private void StartVisualization(byte[] audioSamples)
         {
-            _visualizationCts?.Cancel();
-            _visualizationCts = new CancellationTokenSource();
-            var token = _visualizationCts.Token;
+            _visualizationTimer?.Stop();
+
             byte[] samplesCopy = audioSamples.ToArray();
+            int sampleRate = 44100;
+            int bytesPerSample = 2;
+            int updateIntervalMs = 50;
+            int samplesPerUpdate = (sampleRate * updateIntervalMs) / 1000;
+            int bytesPerUpdate = samplesPerUpdate * bytesPerSample;
+            int offset = 0;
 
-            Task.Run(async () =>
+            _visualizationTimer = new DispatcherTimer();
+            _visualizationTimer.Interval = TimeSpan.FromMilliseconds(updateIntervalMs);
+            _visualizationTimer.Tick += (s, e) =>
             {
-                int sampleRate = 44100;
-                int bytesPerSample = 2;
-                int updateIntervalMs = 50;
-                int samplesPerUpdate = (sampleRate * updateIntervalMs) / 1000;
-                int bytesPerUpdate = samplesPerUpdate * bytesPerSample;
-
-                int offset = 0;
-
-                while (offset < samplesCopy.Length && !token.IsCancellationRequested)
+                if (offset >= samplesCopy.Length)
                 {
-                    int length = Math.Min(bytesPerUpdate, samplesCopy.Length - offset);
-                    byte[] chunk = new byte[length];
-                    Array.Copy(samplesCopy, offset, chunk, 0, length);
-
-                    Application.Current.Dispatcher.Invoke(() => UpdateOutputMetrics(chunk));
-
-                    offset += length;
-                    await Task.Delay(updateIntervalMs);
-                }
-
-                // Wait for audio to fully complete before resetting meters
-                await Task.Delay(200); // Extra buffer for audio completion
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
+                    _visualizationTimer.Stop();
+                    // Reset meters
                     OutputVolume = 0;
                     OutputFrequency = 0;
-                });
-            }, token);
+                    return;
+                }
+
+                int length = Math.Min(bytesPerUpdate, samplesCopy.Length - offset);
+                byte[] chunk = new byte[length];
+                Array.Copy(samplesCopy, offset, chunk, 0, length);
+
+                UpdateOutputMetrics(chunk);
+
+                offset += length;
+            };
+            _visualizationTimer.Start();
         }
 
         private void UpdateOutputMetrics(byte[] audioSamples)
@@ -624,6 +657,12 @@ namespace RadioDataApp.ViewModels
             OutputVolume = Math.Min(1.0, rms / 10000.0);
         }
 
+        private DispatcherTimer? _fileTransferTimer;
+        private List<byte[]>? _transferPackets;
+        private int _transferIndex;
+        private string? _transferTempPath;
+        private bool _transferIsCompressed;
+
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void SendFile()
         {
@@ -633,8 +672,8 @@ namespace RadioDataApp.ViewModels
 
             string filePath = dialog.FileName;
             string fileName = Path.GetFileName(filePath);
-            bool isCompressed = false;
-            string tempPath = "";
+            _transferIsCompressed = false;
+            _transferTempPath = "";
 
             // Compression Logic
             if (CompressImages && ImageCompressionService.IsImageFile(filePath))
@@ -644,12 +683,12 @@ namespace RadioDataApp.ViewModels
                     StatusMessage = "Compressing Image...";
                     byte[] compressedData = _imageCompressionService.CompressImage(filePath);
 
-                    tempPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(fileName) + ".cimg");
-                    File.WriteAllBytes(tempPath, compressedData);
+                    _transferTempPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(fileName) + ".cimg");
+                    File.WriteAllBytes(_transferTempPath, compressedData);
 
-                    filePath = tempPath;
-                    fileName = Path.GetFileName(tempPath); // .cimg
-                    isCompressed = true;
+                    filePath = _transferTempPath;
+                    fileName = Path.GetFileName(_transferTempPath); // .cimg
+                    _transferIsCompressed = true;
 
                     DebugLog += $"[COMPRESSION] Reduced {new FileInfo(dialog.FileName).Length} bytes -> {compressedData.Length} bytes\n";
                 }
@@ -668,7 +707,7 @@ namespace RadioDataApp.ViewModels
             double otherPacketTime = 9.5;
             double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
-            if (fileSize > 1024 && !isCompressed) // Don't ask if we just compressed it, user knows
+            if (fileSize > 1024 && !_transferIsCompressed) // Don't ask if we just compressed it, user knows
             {
                 string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
                 var result = MessageBox.Show(
@@ -691,67 +730,79 @@ namespace RadioDataApp.ViewModels
             DebugLog += $"Est. time: {estimatedSeconds:F0}s\n";
             DebugLog += "====================\n";
 
-            Task.Run(() =>
+            // Prepare packets
+            _transferPackets = _fileTransferService.PrepareFileForTransmission(filePath);
+            _transferIndex = 0;
+
+            // Initialize Transmission
+            int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+            _audioService.InitializeTransmission(deviceIndex);
+
+            // Setup Timer
+            _fileTransferTimer?.Stop();
+            _fileTransferTimer = new DispatcherTimer();
+            _fileTransferTimer.Interval = TimeSpan.FromMilliseconds(50); // Check frequently
+            _fileTransferTimer.Tick += (s, e) =>
             {
-                try
+                // 1. Flow Control
+                if (_audioService.GetBufferedDuration().TotalSeconds > 10)
                 {
-                    var packets = _fileTransferService.PrepareFileForTransmission(filePath);
-                    int total = packets.Count;
-
-                    int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
-                    _audioService.InitializeTransmission(deviceIndex);
-
-                    for (int i = 0; i < total; i++)
-                    {
-                        bool preamble = i == 0;
-                        int preambleDuration = preamble ? 1200 : 0;
-                        var audio = _modem.Modulate(packets[i], preamble, preambleDuration);
-
-                        _audioService.QueueAudio(audio);
-
-                        Application.Current.Dispatcher.Invoke(() => UpdateOutputMetrics(audio));
-
-                        double prog = (i + 1) / (double)total * 100;
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            TransferProgress = prog;
-                            TransferStatus = $"Sending {fileName}: Packet {i + 1}/{total}";
-                        });
-
-                        if (_audioService.GetBufferedDuration().TotalSeconds > 10)
-                        {
-                            Thread.Sleep(1000);
-                        }
-                    }
-
-                    while (_audioService.GetBufferedDuration().TotalMilliseconds > 0)
-                    {
-                        Thread.Sleep(100);
-                    }
-
-                    _audioService.StopTransmission();
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        StatusMessage = $"File sent: {fileName}";
-                        TransferStatus = $"Completed: {fileName} ({total} packets)";
-                        TransferProgress = 100;
-                        IsTransmitting = false;
-                        IsTransferring = false;
-                        OutputFrequency = 1000;
-                        OutputVolume = 0;
-                        DebugLog += "=== SEND COMPLETE ===\n";
-                        DebugLog += "====================\n\n";
-                    });
+                    return; // Buffer full, wait
                 }
-                finally
+
+                // 2. Sending Packets
+                if (_transferPackets != null && _transferIndex < _transferPackets.Count)
                 {
-                    if (isCompressed && File.Exists(tempPath))
-                    {
-                        File.Delete(tempPath);
-                    }
+                    var packet = _transferPackets[_transferIndex];
+                    bool preamble = _transferIndex == 0;
+                    int preambleDuration = preamble ? 1200 : 0;
+
+                    // Modulate
+                    var audio = _modem.Modulate(packet, preamble, preambleDuration);
+
+                    // Queue
+                    _audioService.QueueAudio(audio);
+
+                    // Visualize (on UI thread, so simple call)
+                    UpdateOutputMetrics(audio);
+
+                    // Update Progress
+                    _transferIndex++;
+                    double prog = (double)_transferIndex / _transferPackets.Count * 100;
+                    TransferProgress = prog;
+                    TransferStatus = $"Sending {fileName}: Packet {_transferIndex}/{_transferPackets.Count}";
+
+                    return;
                 }
-            });
+
+                // 3. Completion
+                // Wait for buffer to drain
+                if (_audioService.GetBufferedDuration().TotalSeconds > 0.1)
+                {
+                    return;
+                }
+
+                // Done
+                _fileTransferTimer.Stop();
+                _audioService.StopTransmission();
+
+                StatusMessage = $"File sent: {fileName}";
+                TransferStatus = $"Completed: {fileName} ({_transferPackets?.Count ?? 0} packets)";
+                TransferProgress = 100;
+                IsTransmitting = false;
+                IsTransferring = false;
+                OutputFrequency = 1000;
+                OutputVolume = 0;
+                DebugLog += "=== SEND COMPLETE ===\n";
+                DebugLog += "====================\n\n";
+
+                // Cleanup
+                if (_transferIsCompressed && !string.IsNullOrEmpty(_transferTempPath) && File.Exists(_transferTempPath))
+                {
+                    try { File.Delete(_transferTempPath); } catch { }
+                }
+            };
+            _fileTransferTimer.Start();
         }
     }
 }
