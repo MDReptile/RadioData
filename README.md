@@ -7,6 +7,13 @@
 
 ![RadioData Application Screenshot](screenshot.png)
 
+### Example Hardware Configuration
+
+![Hardware Setup - Surface tablet with Baofeng UV-5R and BTECH APRS-K2 cable](hardware-setup.png)
+
+*Microsoft Surface tablet connected to Baofeng UV-5R radio via BTECH APRS-K2 cable*
+
+
 ---
 
 ## Features
