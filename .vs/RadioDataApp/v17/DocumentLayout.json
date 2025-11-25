@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "G:\\GoogleAntigravityProjects\\RadioData\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\radiodataapp\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\radiodataapp\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\radiodataapp\\mainwindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\mainwindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\radiodataapp\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\radiodataapp\\modem\\afskmodem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -58,11 +58,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\MainWindow.xaml",
               "RelativeDocumentMoniker": "RadioDataApp\\MainWindow.xaml",
@@ -74,7 +74,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\MainWindow.xaml",
               "RelativeDocumentMoniker": "RadioDataApp\\MainWindow.xaml",
@@ -146,15 +146,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "MainViewModel.cs",
               "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\ViewModels\\MainViewModel.cs",
               "RelativeDocumentMoniker": "RadioDataApp\\ViewModels\\MainViewModel.cs",
               "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\ViewModels\\MainViewModel.cs",
               "RelativeToolTip": "RadioDataApp\\ViewModels\\MainViewModel.cs",
-              "ViewState": "AgIAAG4CAAAAAAAAAAAAwIoCAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAJICAAAAAAAAAIAwwHoBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-25T03:10:41.232Z"
+              "WhenOpened": "2025-11-25T03:10:41.232Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -176,9 +177,10 @@
               "RelativeDocumentMoniker": "RadioDataApp\\Modem\\AfskModem.cs",
               "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\Modem\\AfskModem.cs",
               "RelativeToolTip": "RadioDataApp\\Modem\\AfskModem.cs",
-              "ViewState": "AgIAAAEBAAAAAAAAAABRwAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAABEBAAAAAAAAAABRwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-25T03:08:49.176Z"
+              "WhenOpened": "2025-11-25T03:08:49.176Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",

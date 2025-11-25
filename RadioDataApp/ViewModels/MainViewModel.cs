@@ -275,11 +275,24 @@ namespace RadioDataApp.ViewModels
             // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
             {
-                // Log RMS levels to help diagnose weak signals
+                // Log RMS levels to help diagnose weak signals  
                 if (rms >= 0.001f) // Only log if there's any meaningful signal
                 {
                     DebugLog += $"[RMS: {rms:F4}] ";
+                    
+                    // Warn if signal is too strong (likely to cause distortion)
+                    if (rms > 0.15f)
+                    {
+                        DebugLog += "\n[WARNING] Signal too strong! Reduce system microphone volume or set Input Gain to 0.5x\n";
+                    }
                 }
+            });
+
+            // Hook up checksum failure detection
+            _modem.ChecksumFailed += (s, e) => Application.Current.Dispatcher.Invoke(() =>
+            {
+                DebugLog += $"\n[CHECKSUM FAIL] Packet received but checksum invalid - signal corruption detected!\n";
+                DebugLog += "Try: Reduce microphone volume, adjust Zero-Crossing Threshold, or change Input Gain\n";
             });
 
             _audioService.AudioDataReceived += OnAudioDataReceived;

@@ -46,6 +46,9 @@ namespace RadioDataApp.Modem
         // Event for RMS level logging
         public event EventHandler<float>? RmsLevelDetected;
 
+        // Event for checksum failure detection
+        public event EventHandler? ChecksumFailed;
+
         private List<byte> _byteBuffer = [];
 
         public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1200)
@@ -167,9 +170,19 @@ namespace RadioDataApp.Modem
 
             if (newBytes.Count > 0)
             {
+                int bufferSizeBefore = _byteBuffer.Count;
                 _byteBuffer.AddRange(newBytes);
+                
                 // Try to decode a packet from the buffer
                 CustomProtocol.DecodedPacket? packet = CustomProtocol.DecodeAndConsume(_byteBuffer);
+                
+                // If buffer was consumed but no packet returned, likely checksum failure
+                if (packet == null && _byteBuffer.Count < bufferSizeBefore + newBytes.Count)
+                {
+                    // Buffer was modified (sync word found and removed), but no valid packet
+                    ChecksumFailed?.Invoke(this, EventArgs.Empty);
+                }
+                
                 if (packet != null)
                 {
                     return packet;
