@@ -11,6 +11,7 @@ namespace RadioDataApp.Modem
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
+        private const float SquelchThreshold = 0.01f; // Minimum RMS level to attempt decoding (1% of max)
 
         // Demodulation State
         private float _lastSample = 0;
@@ -93,6 +94,25 @@ namespace RadioDataApp.Modem
 
         public CustomProtocol.DecodedPacket? Demodulate(byte[] audioBytes)
         {
+            // Calculate RMS volume to implement squelch
+            float sumSquares = 0;
+            int sampleCount = audioBytes.Length / 2;
+
+            for (int i = 0; i < audioBytes.Length; i += 2)
+            {
+                short sampleShort = BitConverter.ToInt16(audioBytes, i);
+                float sample = sampleShort / 32768f;
+                sumSquares += sample * sample;
+            }
+
+            float rms = (float)Math.Sqrt(sumSquares / sampleCount);
+
+            // If volume is below squelch threshold, don't attempt to decode
+            if (rms < SquelchThreshold)
+            {
+                return null;
+            }
+
             List<byte> newBytes = [];
 
             for (int i = 0; i < audioBytes.Length; i += 2)
