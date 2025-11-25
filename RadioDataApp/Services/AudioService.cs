@@ -15,7 +15,8 @@ namespace RadioDataApp.Services
         public event EventHandler<byte[]>? AudioDataReceived;
         public event EventHandler? TransmissionCompleted;
 
-        public bool IsLoopbackMode { get; set; } = false;
+        public bool IsInputLoopbackMode { get; set; } = false;
+        public bool IsOutputLoopbackMode { get; set; } = false;
 
         public static List<WaveInCapabilities> GetInputDevices()
         {
@@ -39,10 +40,9 @@ namespace RadioDataApp.Services
 
         public void StartListening(int deviceNumber)
         {
-            if (IsLoopbackMode)
+            if (IsInputLoopbackMode)
             {
-                // In loopback mode, don't actually start recording
-                Console.WriteLine("[AudioService] Loopback mode - skipping StartListening");
+                Console.WriteLine("[AudioService] Input loopback mode - skipping StartListening");
                 return;
             }
 
@@ -51,7 +51,7 @@ namespace RadioDataApp.Services
             _waveIn = new WaveInEvent
             {
                 DeviceNumber = deviceNumber,
-                WaveFormat = new WaveFormat(44100, 1) // 44.1kHz, Mono
+                WaveFormat = new WaveFormat(44100, 1)
             };
 
             _waveIn.DataAvailable += OnDataAvailable;
@@ -80,16 +80,14 @@ namespace RadioDataApp.Services
 
         public void InitializeTransmission(int deviceNumber)
         {
-            if (IsLoopbackMode)
+            if (IsOutputLoopbackMode)
             {
-                // In loopback mode, don't initialize real audio device
-                Console.WriteLine("[AudioService] Loopback mode - InitializeTransmission (no-op)");
+                Console.WriteLine("[AudioService] Output loopback mode - InitializeTransmission (no-op)");
                 return;
             }
 
             Console.WriteLine($"[AudioService] InitializeTransmission called with device index: {deviceNumber}");
 
-            // Show what device this actually is
             var outputs = GetOutputDevices();
             if (deviceNumber >= 0 && deviceNumber < outputs.Count)
             {
@@ -100,10 +98,9 @@ namespace RadioDataApp.Services
                 Console.WriteLine($"[AudioService] ERROR: Device index {deviceNumber} out of range (0-{outputs.Count - 1})");
             }
 
-            // Only stop if not already playing - prevents cutting off active transmission
             if (_waveOut == null || _waveOut.PlaybackState != PlaybackState.Playing)
             {
-                StopTransmission(); // Ensure clean state
+                StopTransmission();
             }
 
             _waveOut = new WaveOutEvent
@@ -113,7 +110,7 @@ namespace RadioDataApp.Services
 
             _bufferedWaveProvider = new BufferedWaveProvider(new WaveFormat(44100, 1))
             {
-                BufferDuration = TimeSpan.FromMinutes(10), // Allow large buffer
+                BufferDuration = TimeSpan.FromMinutes(10),
                 DiscardOnBufferOverflow = false
             };
 
@@ -124,10 +121,9 @@ namespace RadioDataApp.Services
 
         public void QueueAudio(byte[] audioData)
         {
-            if (IsLoopbackMode)
+            if (IsOutputLoopbackMode)
             {
-                // In loopback mode, immediately feed to demodulator
-                Console.WriteLine($"[AudioService] Loopback mode - queuing {audioData.Length} bytes to demodulator");
+                Console.WriteLine($"[AudioService] Output loopback mode - queuing {audioData.Length} bytes to demodulator");
                 AudioDataReceived?.Invoke(this, audioData);
                 return;
             }
@@ -142,10 +138,9 @@ namespace RadioDataApp.Services
 
         public void StopTransmission()
         {
-            if (IsLoopbackMode)
+            if (IsOutputLoopbackMode)
             {
-                // In loopback mode, just fire the completion event
-                Console.WriteLine("[AudioService] Loopback mode - StopTransmission");
+                Console.WriteLine("[AudioService] Output loopback mode - StopTransmission");
                 TransmissionCompleted?.Invoke(this, EventArgs.Empty);
                 return;
             }
@@ -163,13 +158,11 @@ namespace RadioDataApp.Services
         // Legacy method for single-shot transmission (kept for compatibility)
         public void StartTransmitting(int deviceNumber, byte[] audioData)
         {
-            if (IsLoopbackMode)
+            if (IsOutputLoopbackMode)
             {
-                // In loopback mode, immediately feed audio to demodulator
-                Console.WriteLine($"[AudioService] Loopback mode - feeding {audioData.Length} bytes to demodulator");
+                Console.WriteLine($"[AudioService] Output loopback mode - feeding {audioData.Length} bytes to demodulator");
                 AudioDataReceived?.Invoke(this, audioData);
 
-                // Simulate transmission completion after a short delay
                 Task.Run(async () =>
                 {
                     await Task.Delay(100);
@@ -181,7 +174,6 @@ namespace RadioDataApp.Services
             InitializeTransmission(deviceNumber);
             QueueAudio(audioData);
 
-            // Wait for it to finish in a background thread so we don't block but can fire event
             new Thread(() =>
             {
                 while (_bufferedWaveProvider != null && _bufferedWaveProvider.BufferedDuration.TotalMilliseconds > 0)

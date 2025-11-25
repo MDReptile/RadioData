@@ -1,0 +1,103 @@
+﻿# RadioData
+
+> **Created with Google Antigravity** - This application was developed using the first public release of **Google Antigravity** powered by **Gemini 3.0** and **Claude Sonnet 4.5** AI models through "vibe coding" – an agent-driven development approach. Built with **C# .NET 8.0**, **WPF**, **NAudio** for audio processing, **MaterialDesignInXAML** for UI theming, and **CommunityToolkit.Mvvm** for MVVM architecture.
+
+---
+
+**RadioData** is a robust, "hacker-style" application designed for reliable data transmission over audio frequencies (AFSK). It enables encrypted text messaging and file transfer between computers using standard radio transceivers or audio cables.
+
+![Screenshot](screenshot.png)
+
+## Key Features
+
+### 📡 Reliable AFSK Modem
+- **500 Baud Rate**: Optimized for reliability over noisy radio channels.
+- **Smart Preamble**: 1-second preamble on the first packet to trigger VOX activation.
+- **Continuous Transmission**: Streams audio using `BufferedWaveProvider` to keep the radio's VOX engaged during multi-packet file transfers.
+
+### 🔒 Encryption Key System
+- **Configurable Key Length**: Default "RADIO", customizable from 1-64 characters.
+- **XOR Cipher**: Simple but effective encryption using repeating key pattern.
+- **Persistent Settings**: Key is saved to `%LocalAppData%\RadioData` and restored on app restart.
+- **Selective Reception**: Only recipients with the matching key can decode transmissions.
+
+### 📁 Robust File Transfer
+- **Out-of-Order Handling**: Uses Sequence IDs to correctly reassemble file chunks even if packets arrive out of order.
+- **Automatic Organization**: Saves received files to a `ReceivedFiles` subdirectory with unique filenames.
+- **12-bit Image Compression**: Optional compression reduces image transmission time by ~50% using custom 4-bit-per-channel color packing.
+
+### 🎛️ Dual Metering System
+- **Real-time Visualization**: Displays both **Frequency** (1000-2400 Hz range) and **Volume** (0-100%) for Input and Output.
+- **Smart Opacity**: Frequency bars automatically dim when volume drops below threshold to reduce visual noise.
+- **Color-Coded Meters**: Green for input, Red for output.
+
+### 🎨 Terminal Aesthetic
+- **Dark Theme**: High-contrast design with Dark Gray (`#1E1E1E`) background and Terminal Green (`#4CAF50`) accents.
+- **Material Design**: Custom-styled controls including visible checkboxes and raised buttons optimized for dark backgrounds.
+- **Compact Layout**: Efficient use of vertical space with clear section headers and real-time system logs.
+
+## Hardware Testing
+
+This application has been successfully tested with:
+- **Radio**: Baofeng UV-5R (and similar models)
+- **Interface Cable**: BTECH APRS-K2 cable (connects radio to computer's audio jack)
+- **Configuration**: Radio set to VOX mode with sensitivity adjusted for reliable triggering
+
+The APRS-K2 cable handles both audio input (from radio speaker) and output (to radio microphone), making it ideal for digital data modes over FM voice channels.
+
+## Core Components
+
+- **`CustomProtocol.cs`**: Packet framing with sync words (0xAA 0x55), length fields, packet types, XOR encryption, and checksums.
+- **`AfskModem.cs`**: Audio Frequency Shift Keying implementation. Modulates binary data to 1200/2200 Hz tones and demodulates received audio using Goertzel algorithm.
+- **`AudioService.cs`**: Audio device management with NAudio. Uses `BufferedWaveProvider` for gap-free transmission and `WaveInEvent` for continuous reception.
+- **`FileTransferService.cs`**: File packetization (200-byte chunks), sequence ID tracking, out-of-order reassembly, and decompression handling.
+- **`ImageCompressionService.cs`**: 12-bit color compression. Downsamples RGB 8-bit channels to 4-bit (16 values) and packs 2 pixels into 3 bytes.
+- **`SettingsService.cs`**: Persistent storage of encryption key using JSON serialization to `%LocalAppData%\RadioData\RadioData.settings.json`.
+- **`MainViewModel.cs`**: MVVM coordinator. Connects all services, handles UI bindings, real-time metering, and event orchestration.
+
+## Getting Started
+
+1. **Select Audio Devices**: 
+   - **Input Device**: Choose your microphone or radio input (e.g., "Microphone (APRS-K2)")
+   - **Output Device**: Choose your speakers or radio output (e.g., "Speakers (APRS-K2)")
+
+2. **Set Encryption Key**: 
+   - Both sender and receiver must use the **same encryption key**
+   - Default is "RADIO" - change to any string (1-64 characters) for privacy
+
+3. **Configure Radio** (if using):
+   - Set radio to **FM mode**
+   - Enable **VOX** (voice-activated transmission) with medium sensitivity
+   - Tune both radios to the same frequency (simplex operation)
+
+4. **Transmit**:
+   - **Text Message**: Type up to 120 characters and click **Send text**
+   - **File Transfer**: Click **Send file** to select and transmit any file
+   - **Image Compression**: Check the box to use 12-bit compression for faster image transfers (reduces quality but saves ~50% bandwidth)
+
+5. **Receive**: 
+   - The app automatically listens and displays received data in the System Log
+   - Files appear in the `ReceivedFiles` folder (click "Open Received Files" button)
+   - Progress bar shows real-time transfer status
+
+## Security & Privacy
+
+The XOR cipher provides basic obfuscation to prevent casual eavesdropping but is **not cryptographically secure**. For sensitive communications:
+- Use a strong, unique encryption key known only to your correspondents
+- Operate on private/licensed frequencies when possible
+- Consider additional end-to-end encryption before transmission for critical data
+
+## Requirements
+- **.NET 8.0 Runtime** (or SDK for building from source)
+- **Windows 10/11** (WPF application)
+- **Audio Interface**: 
+  - Built-in microphone/speakers for local testing
+  - Virtual Audio Cable (e.g., VB-Audio) for loopback testing
+  - APRS-K2 or similar cable for radio connection
+
+## Troubleshooting
+
+- **No transmission**: Ensure VOX is enabled and sensitivity is high enough to trigger on audio tones
+- **Garbled reception**: Check audio levels (aim for 50-80% volume meter), try reducing background noise
+- **File corruption**: Verify both sides use the **same encryption key** and baud rate (500 baud is fixed)
+- **Decryption failures**: Keys must match exactly - check for typos or trailing spaces

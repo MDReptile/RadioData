@@ -1,0 +1,520 @@
+﻿# RadioData - Issues Analysis & Recommended Fixes
+
+## Summary
+
+This document details the problems found in the RadioData codebase, particularly focusing on the **asymmetric send/receive reliability** issue where transmission works better in one direction than the other.
+
+---
+
+## Critical Issues
+
+### 1. ❌ CRITICAL: Fixed Zero-Crossing Threshold (Main Cause of Asymmetry)
+
+**File**: `RadioDataApp/Modem/AfskModem.cs` - Line ~157  
+**Severity**: HIGH - Primary cause of directional reliability differences
+
+**Current Code**:
+```csharp
+private void ProcessZeroCrossing(float sample)
+{
+    _samplesSinceCrossing++;
+    
+    if ((sample > 0 && _lastSample <= 0) || (sample <= 0 && _lastSample > 0))
+    {
+        // Fixed threshold - THE PROBLEM
+        if (_samplesSinceCrossing > 14)
+        {
+            _currentLevel = true; // Mark (1200 Hz)
+        }
+        else
+        {
+            _currentLevel = false; // Space (2200 Hz)
+        }
+        
+        _samplesSinceCrossing = 0;
+    }
+    _lastSample = sample;
+}
+```
+
+**Problem Explanation**:
+- The threshold of **14 samples** attempts to distinguish between:
+  - Mark (1200 Hz) = ~36.75 samples/cycle at 44.1kHz
+  - Space (2200 Hz) = ~20.05 samples/cycle at 44.1kHz
+- This works when signal is **perfect**, but in real-world conditions:
+  - Device A's output + Device B's input = Different signal characteristics
+  - Device B's output + Device A's input = Different characteristics
+  - One direction may have more latency, filtering, or noise
+  - One direction may have stronger/weaker signal amplitude
+
+**Why This Causes Asymmetry**:
+- Computer A → Computer B might have clean, strong signal (threshold works)
+- Computer B → Computer A might have weak signal or more latency (threshold fails)
+- The fixed value can't adapt to different hardware characteristics
+
+**Recommended Fix** (ADVANCED):
+Implement **adaptive threshold calculation** during preamble:
+
+```csharp
+// Add fields
+private int _markSampleAverage = 37; // Default for 1200 Hz
+private int _spaceSampleAverage = 20; // Default for 2200 Hz
+private int _threshold = 14; // Calculated dynamically
+private bool _calibrationMode = false;
+private List<int> _calibrationSamples = new();
+
+// In Modulate(), set calibration flag
+public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1200)
+{
+    // Signal that next demodulation should calibrate
+    if (includePreamble)
+    {
+        // Caller should call EnableCalibration() before demodulating preamble
+    }
+    // ... rest of modulation
+}
+
+public void EnableCalibration()
+{
+    _calibrationMode = true;
+    _calibrationSamples.Clear();
+}
+
+private void ProcessZeroCrossing(float sample)
+{
+    _samplesSinceCrossing++;
+    
+    if ((sample > 0 && _lastSample <= 0) || (sample <= 0 && _lastSample > 0))
+    {
+        if (_calibrationMode)
+        {
+            // Collect samples during preamble (Mark tone = 1200 Hz)
+            _calibrationSamples.Add(_samplesSinceCrossing);
+            
+            if (_calibrationSamples.Count >= 50) // Enough samples
+            {
+                // Calculate average for Mark (preamble is all Mark)
+                _markSampleAverage = (int)_calibrationSamples.Average();
+                
+                // Calculate expected Space (2200/1200 = 1.833 ratio)
+                _spaceSampleAverage = (int)(_markSampleAverage / 1.833);
+                
+                // Threshold is midpoint
+                _threshold = (_markSampleAverage + _spaceSampleAverage) / 2;
+                
+                _calibrationMode = false;
+                Console.WriteLine($"[Calibration] Mark: {_markSampleAverage}, Space: {_spaceSampleAverage}, Threshold: {_threshold}");
+            }
+        }
+        
+        // Use calculated threshold
+        if (_samplesSinceCrossing > _threshold)
+        {
+            _currentLevel = true; // Mark
+        }
+        else
+        {
+            _currentLevel = false; // Space
+        }
+        
+        _samplesSinceCrossing = 0;
+    }
+    _lastSample = sample;
+}
+```
+
+**Recommended Fix** (SIMPLE - Quick Test):
+Make threshold configurable and let users adjust:
+
+```csharp
+// Add public property
+public int ZeroCrossingThreshold { get; set; } = 14;
+
+// In ProcessZeroCrossing
+if (_samplesSinceCrossing > ZeroCrossingThreshold)
+{
+    _currentLevel = true;
+}
+```
+
+Then add UI slider: "Zero-Crossing Threshold: 10-20" and let users tune for their hardware.
+
+---
+
+### 2. ❌ CRITICAL: Hardcoded Start Bit Timing Compensation
+
+**File**: `RadioDataApp/Modem/AfskModem.cs` - Line ~186  
+**Severity**: HIGH - Causes bit timing misalignment
+
+**Current Code**:
+```csharp
+case UartState.Idle:
+    if (!_currentLevel) // Detected Space (Start Bit)
+    {
+        _state = UartState.StartBit;
+        _samplesInCurrentState = -2; // ⚠️ HARDCODED
+    }
+    break;
+```
+
+**Problem**:
+- The `-2` assumes a fixed detection latency
+- Different audio interfaces have different latencies (USB audio, onboard audio, etc.)
+- This value might be perfect for one direction but wrong for the reverse
+
+**Impact**:
+- Bit center sampling may be off
+- Causes occasional bit errors in one direction but not the other
+- Accumulates over the byte (8 bits) leading to complete decoding failure
+
+**Recommended Fix**:
+Calculate compensation dynamically based on detected signal:
+
+```csharp
+// Add field
+private double _startBitCompensation = -2.0; // Can be negative or positive
+
+// In configuration or calibration
+public void CalibrateStartBitTiming()
+{
+    // During test transmission, measure actual detection offset
+    // This requires more complex calibration logic
+    // For now, make it user-configurable
+}
+
+// Use in code
+case UartState.Idle:
+    if (!_currentLevel)
+    {
+        _state = UartState.StartBit;
+        _samplesInCurrentState = _startBitCompensation;
+    }
+    break;
+```
+
+---
+
+### 3. ⚠️ MEDIUM: Baud Rate Documentation Mismatch
+
+**Files**: Multiple  
+**Severity**: MEDIUM - Confusing but not breaking
+
+**Problem**:
+- Code uses: `const int BaudRate = 250;`
+- README and comments reference: "500 baud"
+- Calculations in FileTransferService use: `AvgPacketTimeSeconds = 2.5` (based on old 500 baud?)
+
+**Fix**: Update all documentation to reflect 250 baud:
+- README.md ✅ (Already fixed in new version)
+- Comments in AfskModem.cs
+- Time estimates in MainViewModel.cs
+
+**Updated Calculations for 250 baud**:
+```
+Bit time: 4 ms
+Byte time: 40 ms (10 bits total)
+Packet time (typical): ~600 ms (including preamble, data, postamble)
+```
+
+---
+
+### 4. ⚠️ MEDIUM: Device Index Confusion
+
+**File**: `RadioDataApp/ViewModels/MainViewModel.cs` - Lines ~83, ~112  
+**Severity**: MEDIUM - Can cause device selection errors
+
+**Current Code**:
+```csharp
+partial void OnSelectedInputDeviceIndexChanged(int value)
+{
+    if (value == 0)
+    {
+        _audioService.IsLoopbackMode = true; // Sets global flag
+        // ...
+    }
+    else
+    {
+        _audioService.IsLoopbackMode = false; // Clears global flag
+        int realDeviceIndex = value - 1;
+        _audioService.StartListening(realDeviceIndex);
+    }
+}
+
+partial void OnSelectedOutputDeviceIndexChanged(int value)
+{
+    if (value == 0)
+    {
+        _audioService.IsLoopbackMode = true; // ALSO sets same global flag
+        // ...
+    }
+    else
+    {
+        _audioService.IsLoopbackMode = false; // ALSO clears it
+        // ...
+    }
+}
+```
+
+**Problem**:
+- Single `IsLoopbackMode` flag controlled by TWO different dropdowns
+- If user selects: Input=Loopback (0), Output=Device1 (1)
+  - Input sets `IsLoopbackMode = true`
+  - Output sets `IsLoopbackMode = false`
+  - Result: Loopback disabled, but user thinks input is loopback
+- Causes confusion and potential device index errors
+
+**Recommended Fix**:
+Separate flags for input and output:
+
+```csharp
+// In AudioService.cs
+public bool IsInputLoopbackMode { get; set; } = false;
+public bool IsOutputLoopbackMode { get; set; } = false;
+
+// In MainViewModel.cs
+partial void OnSelectedInputDeviceIndexChanged(int value)
+{
+    if (value == 0)
+    {
+        _audioService.IsInputLoopbackMode = true;
+        // Don't call StartListening for loopback
+    }
+    else
+    {
+        _audioService.IsInputLoopbackMode = false;
+        _audioService.StartListening(value - 1);
+    }
+}
+
+partial void OnSelectedOutputDeviceIndexChanged(int value)
+{
+    if (value == 0)
+    {
+        _audioService.IsOutputLoopbackMode = true;
+    }
+    else
+    {
+        _audioService.IsOutputLoopbackMode = false;
+        // Device index handled in transmission methods
+    }
+}
+
+// In transmission code
+public void StartTransmitting(int deviceNumber, byte[] audioData)
+{
+    if (IsOutputLoopbackMode)
+    {
+        // Feed to demodulator
+        AudioDataReceived?.Invoke(this, audioData);
+    }
+    else
+    {
+        // Use real device
+        InitializeTransmission(deviceNumber);
+        QueueAudio(audioData);
+    }
+}
+```
+
+---
+
+### 5. ⚠️ MEDIUM: Input Gain Clipping Distortion
+
+**File**: `RadioDataApp/Modem/AfskModem.cs` - Line ~118  
+**Severity**: MEDIUM - Can make reception worse instead of better
+
+**Current Code**:
+```csharp
+sample *= InputGain;
+sample = Math.Clamp(sample, -1.0f, 1.0f); // Hard clipping
+```
+
+**Problem**:
+- Input gain amplifies signal linearly
+- Clamp() creates **hard clipping distortion**
+- Clipping destroys zero-crossing timing (adds harmonics)
+- User increases gain to "help" but actually makes decoding worse
+
+**Better Approach**:
+Implement soft limiting (tanh function):
+
+```csharp
+sample *= InputGain;
+
+// Soft limiting instead of hard clipping
+if (Math.Abs(sample) > 0.9f)
+{
+    sample = (float)(Math.Tanh(sample * 0.5) * 2.0); // Soft saturation
+}
+```
+
+Or warn user if clipping occurs:
+
+```csharp
+sample *= InputGain;
+
+if (Math.Abs(sample) > 1.0f)
+{
+    _clippingDetected = true;
+    sample = Math.Clamp(sample, -1.0f, 1.0f);
+}
+
+// Later, warn user
+if (_clippingDetected)
+{
+    Console.WriteLine("[WARNING] Input gain too high - signal clipping detected! Reduce gain.");
+}
+```
+
+---
+
+### 6. ⚠️ LOW: Inconsistent Preamble Duration
+
+**File**: `RadioDataApp/ViewModels/MainViewModel.cs`  
+**Severity**: LOW - Works but not optimal
+
+**Problem**:
+- Text messages: 1200ms preamble (implicit)
+- File header: 1200ms preamble (explicit)
+- File chunks: 0ms preamble
+- All hardcoded, no user control
+
+**Issue**:
+- 1200ms may be too long for some VOX radios (wastes time/bandwidth)
+- May be too short for others (VOX fails to trigger)
+
+**Recommended Fix**:
+Add UI setting for preamble duration:
+
+```csharp
+[ObservableProperty]
+private int _preambleDurationMs = 1200;
+
+// In settings
+PreambleDuration: [Slider 500-2000ms]
+
+// In modulation calls
+byte[] audio = _modem.Modulate(packet, true, PreambleDurationMs);
+```
+
+---
+
+## Testing Recommendations
+
+### To Verify Asymmetry Issue
+
+1. **Controlled Test Setup**:
+   ```
+   Computer A → Virtual Audio Cable → Computer B
+   Computer B → Virtual Audio Cable → Computer A
+   ```
+
+2. **Send 100 test messages each direction**:
+   ```csharp
+   // Automated test
+   for (int i = 0; i < 100; i++)
+   {
+       SendTestMessage($"Test {i}");
+       await Task.Delay(1000);
+   }
+   ```
+
+3. **Compare success rates**:
+   ```
+   A → B: 98/100 (98% success)
+   B → A: 85/100 (85% success)
+   
+   Asymmetry confirmed if difference > 10%
+   ```
+
+4. **Test with different hardware**:
+   - USB audio interface vs onboard audio
+   - Different computers
+   - Different audio cables
+
+### To Test Proposed Fixes
+
+1. **Zero-Crossing Threshold Test**:
+   ```csharp
+   // Try different thresholds
+   for (int threshold = 10; threshold <= 20; threshold++)
+   {
+       modem.ZeroCrossingThreshold = threshold;
+       int successCount = TestReception(100);
+       Console.WriteLine($"Threshold {threshold}: {successCount}/100");
+   }
+   // Use threshold with best success rate
+   ```
+
+2. **Start Bit Compensation Test**:
+   ```csharp
+   for (double compensation = -5.0; compensation <= 5.0; compensation += 0.5)
+   {
+       modem.StartBitCompensation = compensation;
+       int successCount = TestReception(100);
+       Console.WriteLine($"Compensation {compensation}: {successCount}/100");
+   }
+   ```
+
+---
+
+## Workarounds for Users (Until Fixed)
+
+### If Sending Works But Receiving Doesn't:
+
+1. **Adjust Input Gain** (0.5x to 2.0x):
+   - Try 0.5x if signal is strong (reduces clipping)
+   - Try 1.5x if signal is weak (amplifies)
+   - Don't go above 2.0x (causes severe distortion)
+
+2. **Adjust Audio Levels**:
+   - Reduce system volume to 50-60%
+   - Check for clipping in volume meters
+
+3. **Swap Hardware**:
+   - If A→B works but B→A doesn't, make A the permanent receiver
+
+4. **Use Same Audio Interface**:
+   - If possible, use identical audio hardware on both sides
+
+### If Receiving Works But Sending Doesn't:
+
+1. **Check VOX Triggering** (radio only):
+   - Increase VOX sensitivity
+   - Increase system volume
+   - Increase preamble duration (edit code temporarily)
+
+2. **Verify Encryption Key**:
+   - Must match EXACTLY (case-sensitive)
+   - No leading/trailing spaces
+
+---
+
+## Priority Fix Recommendations
+
+### Immediate (Should fix in next release):
+1. ✅ Document baud rate correctly (Done in new README)
+2. 🔧 Add zero-crossing threshold as user setting (simple fix)
+3. 🔧 Fix device index loopback logic (prevents errors)
+
+### Short-term (Next major version):
+4. 🔧 Implement adaptive zero-crossing threshold
+5. 🔧 Add automatic gain control (AGC)
+6. 🔧 Add preamble duration setting
+
+### Long-term (Future enhancements):
+7. 🔧 Replace zero-crossing with Goertzel filter
+8. 🔧 Add forward error correction (FEC)
+9. 🔧 Implement packet acknowledgment system
+
+---
+
+## Conclusion
+
+The main issue causing **asymmetric send/receive reliability** is the **fixed zero-crossing threshold** combined with **hardcoded timing compensation**. These values work well in ideal conditions but fail when audio hardware characteristics differ between sender and receiver.
+
+**Quick Fix**: Make threshold user-configurable  
+**Proper Fix**: Implement adaptive calibration during preamble  
+**Best Fix**: Replace zero-crossing with proper frequency detection (Goertzel algorithm)
+
+The code is well-structured and functional, but needs these enhancements for reliable bidirectional communication in real-world conditions.

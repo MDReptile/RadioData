@@ -37,17 +37,17 @@ namespace RadioDataApp.ViewModels
             Console.WriteLine($"[DeviceSelection] Input device changed to index {value}");
             DebugLog += $"[DeviceSelection] Input index: {value}\n";
 
-            // Index 0 is loopback
             if (value == 0)
             {
-                _audioService.IsLoopbackMode = true;
-                StatusMessage = "Loopback mode (software)";
-                Console.WriteLine($"[DeviceSelection] Loopback mode enabled");
-                DebugLog += "[DeviceSelection] Loopback mode enabled\n";
+                _audioService.IsInputLoopbackMode = true;
+                StatusMessage = "Input: Loopback mode (software)";
+                Console.WriteLine($"[DeviceSelection] Input loopback mode enabled");
+                DebugLog += "[DeviceSelection] Input loopback mode enabled\n";
+                SaveCurrentSettings();
                 return;
             }
 
-            _audioService.IsLoopbackMode = false;
+            _audioService.IsInputLoopbackMode = false;
             try
             {
                 int realDeviceIndex = value - 1;
@@ -59,8 +59,9 @@ namespace RadioDataApp.ViewModels
                     DebugLog += $"[DeviceSelection] Input device {realDeviceIndex}: {deviceName}\n";
                 }
 
-                _audioService.StartListening(realDeviceIndex); // Adjust for loopback offset
+                _audioService.StartListening(realDeviceIndex);
                 StatusMessage = $"Listening on device {realDeviceIndex}";
+                SaveCurrentSettings();
             }
             catch (System.Exception ex)
             {
@@ -77,18 +78,17 @@ namespace RadioDataApp.ViewModels
             Console.WriteLine($"[DeviceSelection] Output device changed to index {value}");
             DebugLog += $"[DeviceSelection] Output index: {value}\n";
 
-            // Index 0 is loopback  
             if (value == 0)
             {
-                _audioService.IsLoopbackMode = true;
-                StatusMessage = "Loopback mode (software)";
-                Console.WriteLine($"[DeviceSelection] Loopback mode enabled");
-                DebugLog += "[DeviceSelection] Loopback mode enabled\n";
+                _audioService.IsOutputLoopbackMode = true;
+                StatusMessage = "Output: Loopback mode (software)";
+                Console.WriteLine($"[DeviceSelection] Output loopback mode enabled");
+                DebugLog += "[DeviceSelection] Output loopback mode enabled\n";
+                SaveCurrentSettings();
             }
             else
             {
-                _audioService.IsLoopbackMode = false;
-                // Show what real device this maps to
+                _audioService.IsOutputLoopbackMode = false;
                 var outputs = AudioService.GetOutputDevices();
                 int realDeviceIndex = value - 1;
                 if (realDeviceIndex >= 0 && realDeviceIndex < outputs.Count)
@@ -103,6 +103,7 @@ namespace RadioDataApp.ViewModels
                     Console.WriteLine($"[DeviceSelection] ERROR: Real device index {realDeviceIndex} out of range (max {outputs.Count - 1})");
                     DebugLog += $"[ERROR] Device index {realDeviceIndex} out of range!\n";
                 }
+                SaveCurrentSettings();
             }
         }
 
@@ -133,8 +134,45 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private bool _compressImages = true;
 
+        partial void OnCompressImagesChanged(bool value)
+        {
+            SaveCurrentSettings();
+        }
+
         [ObservableProperty]
         private string _messageToSend = "Hello World";
+
+        [ObservableProperty]
+        private double _inputGain = 1.0;
+
+        partial void OnInputGainChanged(double value)
+        {
+            _modem.InputGain = (float)value;
+            Console.WriteLine($"[Settings] Input gain set to {value}x");
+            SaveCurrentSettings();
+        }
+
+        [ObservableProperty]
+        private int _zeroCrossingThreshold = 14;
+
+        partial void OnZeroCrossingThresholdChanged(int value)
+        {
+            _modem.ZeroCrossingThreshold = value;
+            Console.WriteLine($"[Settings] Zero-crossing threshold set to {value}");
+            DebugLog += $"[Settings] Zero-crossing threshold: {value}\n";
+            SaveCurrentSettings();
+        }
+
+        [ObservableProperty]
+        private double _startBitCompensation = -2.0;
+
+        partial void OnStartBitCompensationChanged(double value)
+        {
+            _modem.StartBitCompensation = value;
+            Console.WriteLine($"[Settings] Start bit compensation set to {value}");
+            DebugLog += $"[Settings] Start bit compensation: {value}\n";
+            SaveCurrentSettings();
+        }
 
         [ObservableProperty]
         private string _encryptionKey = "RADIO";
@@ -156,8 +194,8 @@ namespace RadioDataApp.ViewModels
 
             // Update protocol and save
             CustomProtocol.EncryptionKey = value;
-            _settingsService.SaveSettings(new SettingsService.AppSettings { EncryptionKey = value });
             Console.WriteLine($"[Settings] Encryption key updated to: '{value}' ({value.Length} chars)");
+            SaveCurrentSettings();
         }
 
         [ObservableProperty]
@@ -179,8 +217,21 @@ namespace RadioDataApp.ViewModels
             // Load saved settings
             var settings = _settingsService.LoadSettings();
             _encryptionKey = settings.EncryptionKey;
+            _inputGain = settings.InputGain;
+            _zeroCrossingThreshold = settings.ZeroCrossingThreshold;
+            _startBitCompensation = settings.StartBitCompensation;
+            _compressImages = settings.CompressImages;
+            
             CustomProtocol.EncryptionKey = _encryptionKey;
+            _modem.InputGain = (float)_inputGain;
+            _modem.ZeroCrossingThreshold = _zeroCrossingThreshold;
+            _modem.StartBitCompensation = _startBitCompensation;
+            
             Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
+            Console.WriteLine($"[Settings] Loaded input gain: {_inputGain}x");
+            Console.WriteLine($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
+            Console.WriteLine($"[Settings] Loaded start bit compensation: {_startBitCompensation}");
+            Console.WriteLine($"[Settings] Loaded compress images: {_compressImages}");
 
             // Wire up service events
             _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
@@ -207,6 +258,16 @@ namespace RadioDataApp.ViewModels
                 DebugLog += display;
             });
 
+            // Hook up RMS level logging for signal diagnostics
+            _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Log RMS levels to help diagnose weak signals
+                if (rms >= 0.001f) // Only log if there's any meaningful signal
+                {
+                    DebugLog += $"[RMS: {rms:F4}] ";
+                }
+            });
+
             _audioService.AudioDataReceived += OnAudioDataReceived;
             _audioService.TransmissionCompleted += (s, e) =>
             {
@@ -221,6 +282,23 @@ namespace RadioDataApp.ViewModels
             };
 
             LoadDevices();
+            
+            // Load and apply saved device selections after devices are loaded
+            _selectedInputDeviceIndex = settings.SelectedInputDeviceIndex;
+            _selectedOutputDeviceIndex = settings.SelectedOutputDeviceIndex;
+            
+            // Validate that saved indices are still valid
+            if (_selectedInputDeviceIndex >= InputDevices.Count)
+                _selectedInputDeviceIndex = InputDevices.Count > 1 ? 1 : 0;
+            if (_selectedOutputDeviceIndex >= OutputDevices.Count)
+                _selectedOutputDeviceIndex = OutputDevices.Count > 1 ? 1 : 0;
+                
+            // Trigger the device selection handlers
+            OnSelectedInputDeviceIndexChanged(_selectedInputDeviceIndex);
+            OnSelectedOutputDeviceIndexChanged(_selectedOutputDeviceIndex);
+            
+            Console.WriteLine($"[Settings] Loaded input device index: {_selectedInputDeviceIndex}");
+            Console.WriteLine($"[Settings] Loaded output device index: {_selectedOutputDeviceIndex}");
         }
 
         private void LoadDevices()
@@ -243,6 +321,21 @@ namespace RadioDataApp.ViewModels
             // Default to first real device (index 1 = first hardware device)
             if (InputDevices.Count > 1) SelectedInputDeviceIndex = 1;
             if (OutputDevices.Count > 1) SelectedOutputDeviceIndex = 1;
+        }
+
+        private void SaveCurrentSettings()
+        {
+            var settings = new SettingsService.AppSettings
+            {
+                EncryptionKey = EncryptionKey,
+                SelectedInputDeviceIndex = SelectedInputDeviceIndex,
+                SelectedOutputDeviceIndex = SelectedOutputDeviceIndex,
+                InputGain = InputGain,
+                ZeroCrossingThreshold = ZeroCrossingThreshold,
+                StartBitCompensation = StartBitCompensation,
+                CompressImages = CompressImages
+            };
+            _settingsService.SaveSettings(settings);
         }
 
         private void OnAudioDataReceived(object? sender, byte[] audioData)
@@ -353,8 +446,8 @@ namespace RadioDataApp.ViewModels
             // Start visualization
             StartVisualization(audioSamples);
 
-            // Adjust device index for loopback offset (index 0 = loopback, 1+ = real devices)
-            int deviceIndex = _audioService.IsLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+            // Check IsOutputLoopbackMode to determine device index
+            int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
             _audioService.StartTransmitting(deviceIndex, audioSamples);
 
             MessageToSend = string.Empty; // Clear input
@@ -463,9 +556,9 @@ namespace RadioDataApp.ViewModels
             long fileSize = fileInfo.Length;
             int packetCount = (int)Math.Ceiling(fileSize / 200.0);
 
-            // Estimate time for 500 baud
-            double firstPacketTime = 6.8;
-            double otherPacketTime = 4.8;
+            // Update time estimates for 250 baud
+            double firstPacketTime = 13.5;
+            double otherPacketTime = 9.5;
             double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
             if (fileSize > 1024 && !isCompressed) // Don't ask if we just compressed it, user knows
@@ -498,24 +591,19 @@ namespace RadioDataApp.ViewModels
                     var packets = _fileTransferService.PrepareFileForTransmission(filePath);
                     int total = packets.Count;
 
-                    // 1. Initialize continuous transmission (adjust device index for loopback offset)
-                    int deviceIndex = _audioService.IsLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+                    int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
                     _audioService.InitializeTransmission(deviceIndex);
 
                     for (int i = 0; i < total; i++)
                     {
-                        // 2. Modulate packet (Preamble only on first, 1.2s for radio VOX)
                         bool preamble = i == 0;
-                        int preambleDuration = preamble ? 1200 : 0; // 1.2 seconds for file header
+                        int preambleDuration = preamble ? 1200 : 0;
                         var audio = _modem.Modulate(packets[i], preamble, preambleDuration);
 
-                        // 3. Queue audio immediately
                         _audioService.QueueAudio(audio);
 
-                        // Update Output Meters (approximate since it's queued)
                         Application.Current.Dispatcher.Invoke(() => UpdateOutputMetrics(audio));
 
-                        // 4. Update UI
                         double prog = (i + 1) / (double)total * 100;
                         Application.Current.Dispatcher.Invoke(() =>
                         {
@@ -523,20 +611,17 @@ namespace RadioDataApp.ViewModels
                             TransferStatus = $"Sending {fileName}: Packet {i + 1}/{total}";
                         });
 
-                        // Optional: Throttle loop slightly
                         if (_audioService.GetBufferedDuration().TotalSeconds > 10)
                         {
                             Thread.Sleep(1000);
                         }
                     }
 
-                    // 5. Wait for playback to finish
                     while (_audioService.GetBufferedDuration().TotalMilliseconds > 0)
                     {
                         Thread.Sleep(100);
                     }
 
-                    // 6. Stop transmission
                     _audioService.StopTransmission();
 
                     Application.Current.Dispatcher.Invoke(() =>
@@ -554,7 +639,6 @@ namespace RadioDataApp.ViewModels
                 }
                 finally
                 {
-                    // Cleanup temp file
                     if (isCompressed && File.Exists(tempPath))
                     {
                         File.Delete(tempPath);

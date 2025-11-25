@@ -11,7 +11,7 @@ namespace RadioDataApp.Services
     public class FileTransferService
     {
         private const int MaxChunkSize = 200; // Payload size limit
-        private const double AvgPacketTimeSeconds = 2.5; // Average time per packet at 500 baud
+        private const double AvgPacketTimeSeconds = 4.8; // Average time per packet at 250 baud
         private const double SilenceTimeoutSeconds = 10.0; // Timeout if no packets for 10s
 
         private readonly ImageCompressionService _imageCompressionService = new();

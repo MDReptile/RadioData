@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:RadioDataApp"
         xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
         mc:Ignorable="d"
-        Title="RadioData" Height="900" Width="800"
+        Title="RadioData" Height="768" Width="1280" MinHeight="600" MinWidth="1024"
         TextElement.Foreground="#4CAF50"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"
@@ -19,25 +19,23 @@
 
     <Window.Resources>
         <local:OpacityMultiplierConverter x:Key="OpacityMultiplierConverter"/>
-        <SolidColorBrush x:Key="TerminalGreen" Color="#4CAF50"/> <!-- Softer Green -->
-        <SolidColorBrush x:Key="TerminalRed" Color="#EF5350"/> <!-- Softer Red -->
+        <SolidColorBrush x:Key="TerminalGreen" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="TerminalRed" Color="#EF5350"/>
         <SolidColorBrush x:Key="TerminalDark" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="TerminalGray" Color="#2D2D30"/> <!-- Slightly lighter gray for contrast -->
+        <SolidColorBrush x:Key="TerminalGray" Color="#2D2D30"/>
         <SolidColorBrush x:Key="PrimaryHueMidBrush" Color="#4CAF50"/>
         <SolidColorBrush x:Key="PrimaryHueMidForegroundBrush" Color="#1E1E1E"/>
         <SolidColorBrush x:Key="MaterialDesignBody" Color="#4CAF50"/>
-        
-        <!-- Material Design resource to suppress warning -->
         <SolidColorBrush x:Key="MaterialDesign.Brush.ComboBox.Border" Color="#4CAF50"/>
         
         <Style TargetType="GroupBox" BasedOn="{StaticResource MaterialDesignCardGroupBox}">
             <Setter Property="BorderBrush" Value="{StaticResource TerminalGreen}"/>
             <Setter Property="Foreground" Value="{StaticResource TerminalGreen}"/>
-            <Setter Property="Background" Value="#252526"/> <!-- Lighter background for cards -->
+            <Setter Property="Background" Value="#252526"/>
             <Setter Property="HeaderTemplate">
                 <Setter.Value>
                     <DataTemplate>
-                        <TextBlock Text="{Binding}" Foreground="White" FontWeight="Bold"/> <!-- Header Text White -->
+                        <TextBlock Text="{Binding}" Foreground="White" FontWeight="Bold"/>
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
@@ -49,7 +47,6 @@
             <Setter Property="BorderBrush" Value="{StaticResource TerminalGreen}"/>
         </Style>
         
-        <!-- Custom CheckBox Style with Full Template -->
         <Style TargetType="CheckBox">
             <Setter Property="Foreground" Value="{StaticResource TerminalGreen}"/>
             <Setter Property="Template">
@@ -61,7 +58,6 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             
-                            <!-- Checkbox Border and Fill -->
                             <Border x:Name="CheckBoxBorder" 
                                     Grid.Column="0"
                                     Width="18" 
@@ -71,7 +67,6 @@
                                     Background="Transparent"
                                     CornerRadius="3"
                                     Margin="0,0,8,0">
-                                <!-- Check Mark -->
                                 <Path x:Name="CheckMark"
                                       Data="M 2,6 L 6,10 L 12,2"
                                       Stroke="{StaticResource TerminalGreen}"
@@ -81,21 +76,18 @@
                                       Margin="2"/>
                             </Border>
                             
-                            <!-- Content (Label) -->
                             <ContentPresenter Grid.Column="1" 
                                               VerticalAlignment="Center"
                                               Content="{TemplateBinding Content}"/>
                         </Grid>
                         
                         <ControlTemplate.Triggers>
-                            <!-- Checked State -->
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="CheckBoxBorder" Property="Background" Value="#4CAF50"/>
                                 <Setter TargetName="CheckMark" Property="Stroke" Value="#1E1E1E"/>
                             </Trigger>
                             
-                            <!-- Hover State -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="CheckBoxBorder" Property="BorderBrush" Value="#66BB6A"/>
                             </Trigger>
@@ -118,172 +110,287 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Background="{StaticResource TerminalGray}" Padding="16,8"> <!-- Reduced vertical padding -->
+        <Border Background="{StaticResource TerminalGray}" Padding="16,8">
             <DockPanel>
                 <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TerminalGreen}">
-                    RadioData
+                    RadioData - Audio Data Transfer
                 </TextBlock>
             </DockPanel>
         </Border>
 
-        <ScrollViewer Grid.Row="1" Margin="10"> <!-- Reduced margin -->
-            <StackPanel>
-                <!-- Audio Settings & Meters -->
-                <GroupBox Header="SYSTEM STATUS / AUDIO METERS" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <ComboBox Grid.Column="0" materialDesign:HintAssist.Hint="Input Device" 
+        <!-- Main Content - 2 Column Layout -->
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="400"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="3*" MinWidth="500"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT COLUMN: Controls and Settings -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Audio Devices -->
+                    <GroupBox Header="AUDIO DEVICES" Margin="0,0,0,8">
+                        <StackPanel Margin="8">
+                            <ComboBox materialDesign:HintAssist.Hint="Input Device" 
                                       ItemsSource="{Binding InputDevices}" 
                                       SelectedIndex="{Binding SelectedInputDeviceIndex}"
                                       Foreground="{StaticResource TerminalGreen}"
                                       materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
-                                      materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"/>
+                                      materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                      Margin="0,0,0,8"
+                                      ToolTip="Select your microphone or radio input device. Use 'Loopback' for software-only testing."/>
                                       
-                            <ComboBox Grid.Column="2" materialDesign:HintAssist.Hint="Output Device" 
+                            <ComboBox materialDesign:HintAssist.Hint="Output Device" 
                                       ItemsSource="{Binding OutputDevices}" 
                                       SelectedIndex="{Binding SelectedOutputDeviceIndex}"
                                       Foreground="{StaticResource TerminalGreen}"
                                       materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
-                                      materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"/>
-                        </Grid>
+                                      materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                      ToolTip="Select your speakers or radio output device. Use 'Loopback' for software-only testing."/>
+                        </StackPanel>
+                    </GroupBox>
 
-                        <!-- Input Meters -->
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="In Freq:" VerticalAlignment="Center"/>
-                            <ProgressBar Grid.Row="0" Grid.Column="1" Value="{Binding InputFrequency}" Minimum="1000" Maximum="2400" Height="10" Margin="0,0,0,5"
-                                         Opacity="{Binding InputVolume, Converter={StaticResource OpacityMultiplierConverter}}"/>
-                            
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="In Vol:" VerticalAlignment="Center"/>
-                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding InputVolume}" Minimum="0" Maximum="1" Height="6"/>
-                        </Grid>
-
-                        <!-- Output Meters -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Out Freq:" VerticalAlignment="Center" Foreground="{StaticResource TerminalRed}"/>
-                            <ProgressBar Grid.Row="0" Grid.Column="1" Value="{Binding OutputFrequency}" Minimum="1000" Maximum="2400" Height="10" Margin="0,0,0,5" 
-                                         Foreground="{StaticResource TerminalRed}"
-                                         Opacity="{Binding OutputVolume, Converter={StaticResource OpacityMultiplierConverter}}"/>
-
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Out Vol:" VerticalAlignment="Center" Foreground="{StaticResource TerminalRed}"/>
-                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding OutputVolume}" Minimum="0" Maximum="1" Height="6" Foreground="{StaticResource TerminalRed}"/>
-                        </Grid>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- Transmission Controls -->
-                <GroupBox Header="TRANSMISSION CONTROLS" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
-                        <TextBox Text="{Binding EncryptionKey, UpdateSourceTrigger=PropertyChanged}"
-                                 MaxLength="64"
-                                 materialDesign:HintAssist.Hint="Encryption Key (1-64 chars)"
-                                 materialDesign:HintAssist.Background="#252526"
-                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                                 Foreground="{StaticResource TerminalGreen}"
-                                 CaretBrush="{StaticResource TerminalGreen}"
-                                 materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
-                                 materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
-                                 BorderBrush="{StaticResource TerminalGreen}"
-                                 Margin="0,0,0,10"/>
-                        
-                        <TextBox Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
-                                 MaxLength="120"
-                                 materialDesign:HintAssist.Hint="Enter message..."
-                                 materialDesign:HintAssist.Background="#252526"
-                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                                 Foreground="{StaticResource TerminalGreen}"
-                                 CaretBrush="{StaticResource TerminalGreen}"
-                                 materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
-                                 materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
-                                 BorderBrush="{StaticResource TerminalGreen}"
-                                 Margin="0,0,0,10"/>
-
-                        <CheckBox Content="Enable Image Compression [12-bit]" 
-                                  IsChecked="{Binding CompressImages}"
-                                  Foreground="{StaticResource TerminalGreen}"
-                                  Margin="0,0,0,10"/>
-
-                        <Grid>
+                    <!-- Audio Meters - Horizontal Layout -->
+                    <GroupBox Header="AUDIO METERS" Margin="0,0,0,8"
+                              ToolTip="Real-time visualization of audio frequency and volume. Input (green) shows received signals, Output (red) shows transmitted signals.">
+                        <Grid Margin="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             
-                            <Button Grid.Column="0" Command="{Binding StartTransmissionCommand}" 
-                                    Content="Send text" 
-                                    Style="{DynamicResource MaterialDesignRaisedButton}"
-                                    Background="{StaticResource TerminalGreen}"
-                                    Foreground="{StaticResource TerminalDark}"
-                                    BorderBrush="{StaticResource TerminalGreen}"
-                                    Height="40"/>
-
-                            <Button Grid.Column="2" Command="{Binding SendFileCommand}" 
-                                    Content="Send file" 
-                                    Style="{DynamicResource MaterialDesignRaisedButton}"
-                                    Background="{StaticResource TerminalGreen}"
-                                    Foreground="{StaticResource TerminalDark}"
-                                    BorderBrush="{StaticResource TerminalGreen}"
-                                    Height="40"/>
+                            <!-- INPUT METERS -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="INPUT" Foreground="{StaticResource TerminalGreen}" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Freq:" VerticalAlignment="Center" FontSize="10"/>
+                                    <ProgressBar Grid.Column="1" Value="{Binding InputFrequency}" Minimum="1000" Maximum="2400" Height="8"
+                                                 Opacity="{Binding InputVolume, Converter={StaticResource OpacityMultiplierConverter}}"
+                                                 ToolTip="Shows detected audio frequency (1200 Hz = Mark/1, 2200 Hz = Space/0)"/>
+                                </Grid>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Vol:" VerticalAlignment="Center" FontSize="10"/>
+                                    <ProgressBar Grid.Column="1" Value="{Binding InputVolume}" Minimum="0" Maximum="1" Height="6"
+                                                 ToolTip="Shows input signal strength (aim for 50-80% for best reception)"/>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- OUTPUT METERS -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="OUTPUT" Foreground="{StaticResource TerminalRed}" FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                                
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Freq:" VerticalAlignment="Center" Foreground="{StaticResource TerminalRed}" FontSize="10"/>
+                                    <ProgressBar Grid.Column="1" Value="{Binding OutputFrequency}" Minimum="1000" Maximum="2400" Height="8" 
+                                                 Foreground="{StaticResource TerminalRed}"
+                                                 Opacity="{Binding OutputVolume, Converter={StaticResource OpacityMultiplierConverter}}"
+                                                 ToolTip="Shows transmitted audio frequency (should alternate between 1200 Hz and 2200 Hz)"/>
+                                </Grid>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="35"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Vol:" VerticalAlignment="Center" Foreground="{StaticResource TerminalRed}" FontSize="10"/>
+                                    <ProgressBar Grid.Column="1" Value="{Binding OutputVolume}" Minimum="0" Maximum="1" Height="6" Foreground="{StaticResource TerminalRed}"
+                                                 ToolTip="Shows output signal strength (fixed at 25% for optimal radio VOX triggering)"/>
+                                </Grid>
+                            </StackPanel>
                         </Grid>
-                    </StackPanel>
-                </GroupBox>
+                    </GroupBox>
 
-                <!-- File Transfer Status -->
-                <GroupBox Header="TRANSFER STATUS" Margin="0,0,0,10">
-                    <StackPanel Margin="10">
+                    <!-- Transmission Controls -->
+                    <GroupBox Header="TRANSMISSION" Margin="0,0,0,8">
+                        <StackPanel Margin="8">
+                            <TextBox Text="{Binding EncryptionKey, UpdateSourceTrigger=PropertyChanged}"
+                                     MaxLength="64"
+                                     materialDesign:HintAssist.Hint="Encryption Key"
+                                     materialDesign:HintAssist.Background="#252526"
+                                     Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                     Foreground="{StaticResource TerminalGreen}"
+                                     CaretBrush="{StaticResource TerminalGreen}"
+                                     materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
+                                     materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                     BorderBrush="{StaticResource TerminalGreen}"
+                                     Margin="0,0,0,16"
+                                     ToolTip="Shared password for encryption (1-64 characters). Both sender and receiver must use the same key. XOR cipher provides basic privacy, not military-grade security."/>
+                            
+                            <TextBox Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
+                                     MaxLength="120"
+                                     materialDesign:HintAssist.Hint="Enter message..."
+                                     materialDesign:HintAssist.Background="#252526"
+                                     Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                     Foreground="{StaticResource TerminalGreen}"
+                                     CaretBrush="{StaticResource TerminalGreen}"
+                                     materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
+                                     materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                     BorderBrush="{StaticResource TerminalGreen}"
+                                     Margin="0,0,0,8"
+                                     ToolTip="Type your message here (max 120 characters). Will be encrypted and sent as audio tones."/>
+
+                            <CheckBox Content="Enable Image Compression [12-bit]" 
+                                      IsChecked="{Binding CompressImages}"
+                                      Foreground="{StaticResource TerminalGreen}"
+                                      Margin="0,0,0,8"
+                                      ToolTip="Compress images to 12-bit color (4 bits per channel) before sending. Reduces file size by ~50% but lowers quality. Decompressed automatically on receive."/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <Button Grid.Column="0" Command="{Binding StartTransmissionCommand}" 
+                                        Content="Send Text" 
+                                        Style="{DynamicResource MaterialDesignRaisedButton}"
+                                        Background="{StaticResource TerminalGreen}"
+                                        Foreground="{StaticResource TerminalDark}"
+                                        BorderBrush="{StaticResource TerminalGreen}"
+                                        Height="36"
+                                        ToolTip="Send the message as encrypted audio tones (250 baud). Takes ~2-4 seconds depending on message length."/>
+
+                                <Button Grid.Column="2" Command="{Binding SendFileCommand}" 
+                                        Content="Send File" 
+                                        Style="{DynamicResource MaterialDesignRaisedButton}"
+                                        Background="{StaticResource TerminalGreen}"
+                                        Foreground="{StaticResource TerminalDark}"
+                                        BorderBrush="{StaticResource TerminalGreen}"
+                                        Height="36"
+                                        ToolTip="Select a file to send. Large files are split into 200-byte packets. Images can be compressed if enabled above."/>
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Transfer Status -->
+                    <GroupBox Header="TRANSFER STATUS"
+                              ToolTip="Shows progress for file transfers. Received files are saved to the ReceivedFiles folder.">
+                        <StackPanel Margin="8">
+                            <Grid Margin="0,0,0,5">
+                                <TextBlock Text="Progress:" VerticalAlignment="Center" FontSize="10"/>
+                                <Button HorizontalAlignment="Right"
+                                        Command="{Binding OpenReceivedFolderCommand}"
+                                        Content="Open Files"
+                                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                        Foreground="{StaticResource TerminalGreen}"
+                                        BorderBrush="{StaticResource TerminalGreen}"
+                                        Padding="6,2"
+                                        Height="22"
+                                        FontSize="9"
+                                        ToolTip="Open the folder where received files are saved"/>
+                            </Grid>
+                            
+                            <ProgressBar Value="{Binding TransferProgress}" Maximum="100" Height="12" Margin="0,0,0,5"/>
+                            
+                            <TextBlock Text="{Binding TransferStatus}" 
+                                       TextWrapping="Wrap"
+                                       FontSize="9"
+                                       FontFamily="Consolas"/>
+                        </StackPanel>
+                    </GroupBox>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- RIGHT COLUMN: Advanced Tuning + System Log -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Advanced Tuning (Top) -->
+                <GroupBox Grid.Row="0" Header="ADVANCED TUNING"
+                          ToolTip="Fine-tune demodulation parameters to fix asymmetric send/receive issues. Adjust these if one direction works better than the other.">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Input Gain (0.5x - 2.0x)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="40"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider Grid.Column="0" 
+                                    Value="{Binding InputGain}" 
+                                    Minimum="0.5" 
+                                    Maximum="2.0" 
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Amplify weak input signals. Try 1.5x if receiving fails. Reduce to 0.8x if signal clips. Warning appears in log if too high."/>
+                            <TextBlock Grid.Column="1" 
+                                       Text="{Binding InputGain, StringFormat={}{0:F1}x}" 
+                                       VerticalAlignment="Center" 
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"
+                                       FontSize="10"/>
+                        </Grid>
+
+                        <TextBlock Text="Zero-Crossing Threshold (10-20)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="40"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider Grid.Column="0" 
+                                    Value="{Binding ZeroCrossingThreshold}" 
+                                    Minimum="10" 
+                                    Maximum="20" 
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Distinguishes 1200 Hz from 2200 Hz tones. Lower (12) = more sensitive to high frequency, Higher (16) = more sensitive to low frequency. Adjust if one direction fails."/>
+                            <TextBlock Grid.Column="1" 
+                                       Text="{Binding ZeroCrossingThreshold}" 
+                                       VerticalAlignment="Center" 
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"
+                                       FontSize="10"/>
+                        </Grid>
+
+                        <TextBlock Text="Start Bit Compensation (-5.0 to +5.0)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="40"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Progress:" VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" 
-                                    Command="{Binding OpenReceivedFolderCommand}"
-                                    Content="Open Received Files"
-                                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                            <Slider Grid.Column="0" 
+                                    Value="{Binding StartBitCompensation}" 
+                                    Minimum="-5.0" 
+                                    Maximum="5.0" 
+                                    TickFrequency="0.5"
+                                    IsSnapToTickEnabled="True"
                                     Foreground="{StaticResource TerminalGreen}"
-                                    BorderBrush="{StaticResource TerminalGreen}"
-                                    Padding="8,2"
-                                    Height="24"
-                                    FontSize="10"
-                                    Margin="0,0,0,5"/>
+                                    ToolTip="Adjusts timing offset for bit detection. Negative = more delay (slower detection), Positive = less delay (faster). Try -3.0 if getting garbled data."/>
+                            <TextBlock Grid.Column="1" 
+                                       Text="{Binding StartBitCompensation, StringFormat={}{0:F1}}" 
+                                       VerticalAlignment="Center" 
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"
+                                       FontSize="10"/>
                         </Grid>
-                        
-                        <ProgressBar Value="{Binding TransferProgress}" Maximum="100" Height="15" Margin="0,0,0,5"/>
-                        
-                        <TextBlock Text="{Binding TransferStatus}" 
-                                   TextWrapping="Wrap"
-                                   FontSize="11"
-                                   FontFamily="Consolas"/>
                     </StackPanel>
                 </GroupBox>
 
-                <!-- Debug Log -->
-                <GroupBox Header="SYSTEM LOG" Height="150">
+                <!-- System Log (Bottom - takes remaining space) -->
+                <GroupBox Grid.Row="2" Header="SYSTEM LOG"
+                          ToolTip="Real-time log of all transmissions, receptions, and system events. TX = transmitted, RX = received.">
                     <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto">
                         <TextBox Text="{Binding DebugLog, Mode=OneWay}" 
                                  TextWrapping="Wrap" 
@@ -297,8 +404,8 @@
                                  HorizontalScrollBarVisibility="Disabled"/>
                     </ScrollViewer>
                 </GroupBox>
-            </StackPanel>
-        </ScrollViewer>
+            </Grid>
+        </Grid>
 
         <!-- Status Bar -->
         <StatusBar Grid.Row="2" Background="{StaticResource TerminalGray}" Foreground="{StaticResource TerminalGreen}">

@@ -28,8 +28,20 @@ namespace RadioDataApp.Modem
         // Modulation State
         private double _phase = 0;
 
+        // Input gain for weak signals
+        public float InputGain { get; set; } = 1.0f; // Default 1.0 = no amplification, 2.0 = double, etc.
+
+        // Configurable zero-crossing threshold
+        public int ZeroCrossingThreshold { get; set; } = 14; // Samples
+
+        // Compensate for detection latency in Start Bit
+        public double StartBitCompensation { get; set; } = -2.0; // Samples
+
         // Event for raw byte debugging
         public event EventHandler<byte>? RawByteReceived;
+
+        // Event for RMS level logging
+        public event EventHandler<float>? RmsLevelDetected;
 
         private List<byte> _byteBuffer = [];
 
@@ -107,6 +119,9 @@ namespace RadioDataApp.Modem
 
             float rms = (float)Math.Sqrt(sumSquares / sampleCount);
 
+            // Emit RMS level for diagnostic logging
+            RmsLevelDetected?.Invoke(this, rms);
+
             // If volume is below squelch threshold, don't attempt to decode
             if (rms < SquelchThreshold)
             {
@@ -114,11 +129,22 @@ namespace RadioDataApp.Modem
             }
 
             List<byte> newBytes = [];
+            bool _clippingDetected = false;
 
             for (int i = 0; i < audioBytes.Length; i += 2)
             {
                 short sampleShort = BitConverter.ToInt16(audioBytes, i);
                 float sample = sampleShort / 32768f;
+
+                // Apply input gain to amplify weak signals
+                sample *= InputGain;
+
+                // Detect and handle clipping
+                if (Math.Abs(sample) > 1.0f)
+                {
+                    _clippingDetected = true;
+                    sample = Math.Clamp(sample, -1.0f, 1.0f);
+                }
 
                 ProcessZeroCrossing(sample);
 
@@ -129,6 +155,11 @@ namespace RadioDataApp.Modem
                     newBytes.Add(b);
                     RawByteReceived?.Invoke(this, b);
                 }
+            }
+
+            if (_clippingDetected)
+            {
+                Console.WriteLine("[WARNING] Input gain too high - signal clipping detected! Reduce gain.");
             }
 
             if (newBytes.Count > 0)
@@ -149,17 +180,15 @@ namespace RadioDataApp.Modem
         {
             _samplesSinceCrossing++;
 
-            // Detect crossing
             if ((sample > 0 && _lastSample <= 0) || (sample <= 0 && _lastSample > 0))
             {
-                // Threshold: 14 samples
-                if (_samplesSinceCrossing > 14)
+                if (_samplesSinceCrossing > ZeroCrossingThreshold)
                 {
-                    _currentLevel = true; // Mark
+                    _currentLevel = true;
                 }
                 else
                 {
-                    _currentLevel = false; // Space
+                    _currentLevel = false;
                 }
 
                 _samplesSinceCrossing = 0;
@@ -174,26 +203,23 @@ namespace RadioDataApp.Modem
             switch (_state)
             {
                 case UartState.Idle:
-                    if (!_currentLevel) // Detected Space (Start Bit)
+                    if (!_currentLevel)
                     {
                         _state = UartState.StartBit;
-                        // Compensate for detection latency (~10 samples for Space)
-                        _samplesInCurrentState = -2;
+                        _samplesInCurrentState = StartBitCompensation;
                     }
                     break;
 
                 case UartState.StartBit:
-                    // Verify at middle of Start Bit
                     if (_samplesInCurrentState >= SamplesPerBit / 2)
                     {
-                        if (_currentLevel) // False start
+                        if (_currentLevel)
                         {
                             _state = UartState.Idle;
                         }
                         else
                         {
                             _state = UartState.DataBits;
-                            // Align to center of bit
                             _samplesInCurrentState -= SamplesPerBit / 2;
                             _bitIndex = 0;
                             _currentByte = 0;
