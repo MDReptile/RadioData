@@ -51,6 +51,12 @@ namespace RadioDataApp.Modem
 
         private List<byte> _byteBuffer = [];
 
+        public AfskModem()
+        {
+            // Subscribe to the protocol's checksum validation event
+            CustomProtocol.ChecksumValidationFailed += (s, e) => ChecksumFailed?.Invoke(this, EventArgs.Empty);
+        }
+
         public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1200)
         {
             List<byte> samples = [];
@@ -135,7 +141,7 @@ namespace RadioDataApp.Modem
             }
 
             List<byte> newBytes = [];
-            bool _clippingDetected = false;
+            bool clippingDetected = false;
 
             for (int i = 0; i < audioBytes.Length; i += 2)
             {
@@ -148,7 +154,7 @@ namespace RadioDataApp.Modem
                 // Detect and handle clipping
                 if (Math.Abs(sample) > 1.0f)
                 {
-                    _clippingDetected = true;
+                    clippingDetected = true;
                     sample = Math.Clamp(sample, -1.0f, 1.0f);
                 }
 
@@ -163,25 +169,18 @@ namespace RadioDataApp.Modem
                 }
             }
 
-            if (_clippingDetected)
+            // Warn if clipping occurred
+            if (clippingDetected)
             {
-                Console.WriteLine("[WARNING] Input gain too high - signal clipping detected! Reduce gain.");
+                Console.WriteLine("[? CLIPPING] Input gain too high - reduce gain or system volume!");
             }
 
             if (newBytes.Count > 0)
             {
-                int bufferSizeBefore = _byteBuffer.Count;
                 _byteBuffer.AddRange(newBytes);
                 
                 // Try to decode a packet from the buffer
                 CustomProtocol.DecodedPacket? packet = CustomProtocol.DecodeAndConsume(_byteBuffer);
-                
-                // If buffer was consumed but no packet returned, likely checksum failure
-                if (packet == null && _byteBuffer.Count < bufferSizeBefore + newBytes.Count)
-                {
-                    // Buffer was modified (sync word found and removed), but no valid packet
-                    ChecksumFailed?.Invoke(this, EventArgs.Empty);
-                }
                 
                 if (packet != null)
                 {

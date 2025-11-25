@@ -27,6 +27,9 @@ namespace RadioDataApp.Modem
             public byte[] Payload { get; set; } = [];
         }
 
+        // Signal for when checksum validation actually failed
+        public static event EventHandler? ChecksumValidationFailed;
+
         private static byte[] ApplyEncryption(byte[] data)
         {
             byte[] keyBytes = Encoding.ASCII.GetBytes(EncryptionKey);
@@ -137,6 +140,8 @@ namespace RadioDataApp.Modem
             if (calculatedChecksum != receivedChecksum)
             {
                 Console.WriteLine("[DEBUG] Checksum Mismatch!");
+                // Signal that checksum validation actually failed
+                ChecksumValidationFailed?.Invoke(null, EventArgs.Empty);
                 // Corrupt packet, remove the Sync Word and try again next time
                 buffer.RemoveRange(0, 2);
                 return null;

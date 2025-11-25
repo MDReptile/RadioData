@@ -274,27 +274,26 @@ namespace RadioDataApp.ViewModels
                 DebugLog += display;
             });
 
-            // Hook up RMS level logging for signal diagnostics
+            // Hook up RMS level logging for signal diagnostics (only when signal present)
             _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
             {
-                // Log RMS levels to help diagnose weak signals  
-                if (rms >= 0.001f) // Only log if there's any meaningful signal
+                // Only log if signal is strong enough to be meaningful
+                if (rms >= 0.02f) // 2% threshold - actual signal, not just noise
                 {
-                    DebugLog += $"[RMS: {rms:F4}] ";
+                    DebugLog += $"[RMS: {rms:F3}] ";
                     
-                    // Warn if signal is too strong (likely to cause distortion)
+                    // Warn if signal is too strong
                     if (rms > 0.15f)
                     {
-                        DebugLog += "\n[WARNING] Signal too strong! Reduce system microphone volume or set Input Gain to 0.5x\n";
+                        DebugLog += "[⚠ STRONG] ";
                     }
                 }
             });
 
-            // Hook up checksum failure detection
+            // Hook up checksum failure detection (now accurate!)
             _modem.ChecksumFailed += (s, e) => Application.Current.Dispatcher.Invoke(() =>
             {
-                DebugLog += $"\n[CHECKSUM FAIL] Packet received but checksum invalid - signal corruption detected!\n";
-                DebugLog += "Try: Reduce microphone volume, adjust Zero-Crossing Threshold, or change Input Gain\n";
+                DebugLog += $"\n[CHECKSUM FAIL] Packet corrupted!\n";
             });
 
             _audioService.AudioDataReceived += OnAudioDataReceived;
@@ -403,7 +402,8 @@ namespace RadioDataApp.ViewModels
                 var packet = _modem.Demodulate(audioData);
                 if (packet != null)
                 {
-                    Console.WriteLine($"[Demod] Received {packet.Type} packet, payload length: {packet.Payload.Length}");
+                    // Log successful decode
+                    Console.WriteLine($"[✓ Demod] {packet.Type}, {packet.Payload.Length} bytes");
 
                     switch (packet.Type)
                     {
