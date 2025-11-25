@@ -284,10 +284,7 @@ namespace RadioDataApp.ViewModels
             _fileTransferService.TimeoutOccurred += OnFileTransferTimeout;
 
             // Hook up raw byte logging for debugging (optional)
-            if (EnableRawByteLogging)
-            {
-                _modem.RawByteReceived += OnRawByteReceived;
-            }
+
 
             // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += OnRmsLevelDetected;
