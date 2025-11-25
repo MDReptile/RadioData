@@ -242,6 +242,7 @@ namespace RadioDataApp.ViewModels
         }
 
         private CancellationTokenSource? _receiveSilenceTimeout;
+        private CancellationTokenSource? _transmissionCooldown;
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
@@ -332,7 +333,23 @@ namespace RadioDataApp.ViewModels
                     if (!IsTransferring)
                     {
                         StatusMessage = "Transmission Complete";
-                        IsTransmitting = false;
+                        
+                        // Enforce minimum cooldown period (500ms) before allowing next transmission
+                        _transmissionCooldown?.Cancel();
+                        _transmissionCooldown = new CancellationTokenSource();
+                        var token = _transmissionCooldown.Token;
+                        
+                        Task.Run(async () =>
+                        {
+                            await Task.Delay(500, token); // 500ms minimum cooldown
+                            if (!token.IsCancellationRequested)
+                            {
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    IsTransmitting = false;
+                                });
+                            }
+                        }, token);
                     }
                 });
             };
