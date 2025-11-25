@@ -1,6 +1,6 @@
 # RadioData - AFSK Audio Data Transfer
 
-> Built with Google Antigravity and Visual Studio, using Gemini 2.0 Flash Thinking and Claude Sonnet 4.5  
+> Built with Google Antigravity and Visual Studio, using Gemini 3 and Claude Sonnet 4.5  
 > Minimal manual coding - mostly vibe coding and AI-assisted development
 
 **Transfer text messages and files over audio using AFSK modulation - perfect for ham radio, walkie-talkies, or any audio link.**
@@ -232,9 +232,4 @@ This project is open source. Feel free to use, modify, and distribute.
 
 ## Acknowledgments
 
-Built using Google Antigravity AI-assisted development with Gemini 2.0 Flash Thinking and Claude Sonnet 4.5. The majority of code was generated through natural language prompts and vibe coding, with minimal manual intervention.
-
----
-
-**Version**: 0.10  
-**Status**: Working - optimized for various hardware configurations
+Built using Visual Studio with Copilot and Google Antigravity AI-assisted development with Gemini 3 and Claude Sonnet 4.5. The majority of code was generated through natural language prompts and vibe coding, with minimal manual intervention.
