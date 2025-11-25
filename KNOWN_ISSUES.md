@@ -29,9 +29,18 @@ Add minimum transmission duration or separate handling for text vs file transmis
 ## Versioning
 
 ### Current Scheme
-- Format: `0.XX` (e.g., 0.07)
+- Format: `0.XX` (e.g., 0.08 in csproj, displays as `0.8` in UI)
+- Display uses `.ToString(2)` which drops trailing zeros (0.08 ? 0.8, 0.10 ? 0.1)
 - Auto-increments on push: 0.01 ? 0.02 ? ... ? 0.10 ? ... ? 0.99 ? 1.0
 - Rolls over to 1.0 at version 100
+
+### Version Display Examples
+- `0.08` (csproj) ? `v0.8` (UI)
+- `0.10` (csproj) ? `v0.1` (UI) 
+- `0.15` (csproj) ? `v0.15` (UI)
+- `1.0` (csproj) ? `v1.0` (UI)
+
+This is standard behavior - trailing zeros after decimal are typically omitted in version displays.
 
 ### Considerations for Future
 Current scheme allows 100 versions before 1.0. Consider switching to semantic versioning (`MAJOR.MINOR.PATCH`) for more flexibility:

@@ -588,6 +588,9 @@ namespace RadioDataApp.ViewModels
                     await Task.Delay(updateIntervalMs);
                 }
 
+                // Wait for audio to fully complete before resetting meters
+                await Task.Delay(200); // Extra buffer for audio completion
+
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     OutputVolume = 0;
