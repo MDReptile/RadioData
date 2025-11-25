@@ -244,9 +244,6 @@ namespace RadioDataApp.ViewModels
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
-        // Debug flag for raw byte logging (set to true to enable)
-        private const bool EnableRawByteLogging = false;
-
         public MainViewModel()
         {
             _audioService = new AudioService();
@@ -282,9 +279,6 @@ namespace RadioDataApp.ViewModels
             _fileTransferService.DebugMessage += OnFileTransferDebugMessage;
             _fileTransferService.FileReceived += OnFileReceived;
             _fileTransferService.TimeoutOccurred += OnFileTransferTimeout;
-
-            // Hook up raw byte logging for debugging (optional)
-
 
             // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += OnRmsLevelDetected;

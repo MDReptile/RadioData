@@ -1,336 +1,240 @@
-# RadioData - AFSK Data Transfer Application
+# RadioData - AFSK Audio Data Transfer
 
-## Overview
+> Built with Google Antigravity and Visual Studio, using Gemini 2.0 Flash Thinking and Claude Sonnet 4.5  
+> Minimal manual coding - mostly vibe coding and AI-assisted development
 
-RadioData is a WPF application for transmitting text messages and files over audio using Audio Frequency Shift Keying (AFSK) modulation. It works with computer speakers/microphones, virtual audio cables, or radio transceivers via audio interfaces.
+**Transfer text messages and files over audio using AFSK modulation - perfect for ham radio, walkie-talkies, or any audio link.**
 
-**Current Version**: .NET 8.0  
-**Status**: Working with known asymmetry issues in send/receive reliability
-
----
-
-## 🔍 Code Analysis & Known Issues
-
-### Critical Issues Identified
-
-#### 1. **Zero-Crossing Detection Asymmetry**
-**Location**: `AfskModem.cs` - `ProcessZeroCrossing()` method  
-**Problem**: The fixed threshold of **14 samples** for distinguishing Mark (1200 Hz) from Space (2200 Hz) frequencies is hardcoded:
-
-```csharp
-if (_samplesSinceCrossing > 14)
-{
-    _currentLevel = true; // Mark
-}
-else
-{
-    _currentLevel = false; // Space
-}
-```
-
-**Why This Causes Send/Receive Asymmetry**:
-- At 44.1 kHz sample rate with 250 baud:
-  - **Mark (1200 Hz)**: ~36.75 samples per cycle
-  - **Space (2200 Hz)**: ~20.05 samples per cycle
-- The threshold of 14 samples is trying to find the midpoint (~18.4 samples)
-- However, this threshold is sensitive to:
-  - Signal strength (weak signals may have slower zero crossings)
-  - Noise levels (can cause premature crossings)
-  - Audio device latency differences (input vs output)
-  - System audio processing (one device may have more filtering than another)
-
-**Impact**: One computer's audio output may produce slightly different zero-crossing timing than another computer's input captures, causing one direction to work better.
-
-#### 2. **Start Bit Latency Compensation Hardcoded**
-**Location**: `AfskModem.cs` - `ProcessUartState()` method  
-**Problem**: 
-```csharp
-case UartState.StartBit:
-    if (!_currentLevel) // Detected Space (Start Bit)
-    {
-        _state = UartState.StartBit;
-        _samplesInCurrentState = -2; // ⚠️ Hardcoded compensation
-    }
-```
-
-**Why This Causes Issues**:
-- The `-2` sample compensation assumes a fixed detection delay
-- Different audio hardware has different latencies
-- This value works well in one direction but may be off in the reverse direction
-- Leads to bit timing misalignment and higher error rates in one direction
-
-#### 3. **Baud Rate Mismatch in Documentation**
-**Location**: Multiple files  
-**Problem**: Code uses **250 baud** but documentation and comments reference **500 baud**
-```csharp
-private const int BaudRate = 250; // Code says 250
-// But README.md and comments reference 500 baud
-```
-**Impact**: Confusing for developers and users trying to calculate transmission times.
-
-#### 4. **Output Device Index Bug**
-**Location**: `MainViewModel.cs` - `OnSelectedOutputDeviceIndexChanged()`  
-**Problem**: When loopback mode is enabled at index 0, the device index calculation for real devices is:
-```csharp
-int deviceIndex = _audioService.IsLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
-```
-
-However, the loopback check happens in TWO places (input and output selection), and either one can set `IsLoopbackMode = true`, causing confusion when only one is set to loopback while the other isn't.
-
-**Impact**: Can lead to transmitting to wrong device or device index errors.
-
-#### 5. **Signal Clipping with Input Gain**
-**Location**: `AfskModem.cs` - `Demodulate()` method  
-**Problem**:
-```csharp
-sample *= InputGain;
-sample = Math.Clamp(sample, -1.0f, 1.0f);
-```
-
-While clamping prevents overflow, it causes **hard clipping distortion** which destroys zero-crossing timing accuracy.
-
-**Impact**: High input gain can actually make reception worse by distorting the waveform.
-
-#### 6. **Inconsistent Preamble Duration**
-**Location**: `MainViewModel.cs` - `SendFile()` method  
-**Problem**: Text messages use **1200ms preamble**, but file headers also use **1200ms**. The modulator defaults to **1200ms**.
-
-```csharp
-// Text message (implicit 1200ms preamble)
-byte[] audioSamples = _modem.Modulate(packet);
-
-// File transmission (explicit 1200ms first packet, 0ms others)
-var audio = _modem.Modulate(packets[i], preamble, preambleDuration);
-```
-
-**Why This Matters**: 
-- 1200ms may be too long for some VOX radios (wastes bandwidth)
-- May be too short for others (VOX doesn't trigger reliably)
-- No ability to adjust per-device or per-transmission type
+![RadioData Application Screenshot](screenshot.png)
 
 ---
 
-## 🛠️ Technical Architecture
+## Features
 
-### Core Components
+- **Text Messaging**: Send up to 120 characters of encrypted text over audio
+- **File Transfer**: Split large files into 200-byte packets and reassemble on reception
+- **Image Compression**: Optional 12-bit color compression (~50% size reduction) for faster image transfers
+- **XOR Encryption**: Basic encryption using configurable shared keys (1-64 characters)
+- **Real-time Audio Meters**: Monitor input/output frequency and volume levels
+- **Loopback Testing**: Software-only mode for testing without physical audio hardware
+- **Advanced Tuning**: Adjustable parameters to optimize for different audio hardware and radio configurations
+- **Settings Persistence**: Automatically saves device selections and encryption keys
+- **Progress Tracking**: Visual progress bars and status updates for file transfers
+- **Received Files Management**: One-click access to received files folder
 
-#### `AfskModem.cs` - AFSK Modulator/Demodulator
-**Modulation**:
-- **Baud Rate**: 250 baud (4ms per bit)
-- **Mark Frequency**: 1200 Hz (binary 1)
-- **Space Frequency**: 2200 Hz (binary 0)
+## How It Works
+
+RadioData uses **Audio Frequency Shift Keying (AFSK)** to encode digital data as audio tones:
+
+- **Mark (binary 1)**: 1200 Hz tone
+- **Space (binary 0)**: 2200 Hz tone
+- **Baud Rate**: 250 baud (4 milliseconds per bit)
 - **Sample Rate**: 44.1 kHz
-- **Amplitude**: 25% of maximum (optimized for radio VOX triggering)
+- **Modulation**: Same standard used by APRS and packet radio
 
-**Demodulation**:
-- **Method**: Zero-crossing detection (counts time between sign changes)
-- **UART State Machine**: Idle → StartBit → 8 DataBits (LSB first) → StopBit
-- **Squelch Threshold**: 0.01 RMS (1% of max signal)
-- **Input Gain**: Configurable multiplier (default 1.0x)
+### Data Flow
 
-**Known Limitations**:
-- Fixed zero-crossing threshold may not work equally well on all hardware
-- No adaptive gain control (AGC)
-- No Forward Error Correction (FEC)
-- Sensitive to background noise
+1. **Encoding**: Text/files → encrypted packets → UART framing → AFSK modulation → audio samples
+2. **Transmission**: Audio samples → sound card/radio → air/cable → receiving sound card/radio
+3. **Decoding**: Audio samples → zero-crossing detection → UART decoding → packet reassembly → file/text display
 
-#### `CustomProtocol.cs` - Packet Framing
-**Packet Structure**:
+### Packet Structure
+
 ```
-[Sync Word: 0xAA 0x55] [Length: 1 byte] [Type: 1 byte] [Payload: encrypted] [Checksum: 1 byte]
+[Sync: 0xAA 0x55] [Length: 1 byte] [Type: 1 byte] [Encrypted Payload] [Checksum: 1 byte]
 ```
-
-**Encryption**:
-- **Method**: XOR cipher with user-provided key (default: "RADIO")
-- **Security**: **NOT cryptographically secure** - basic obfuscation only
-- **Key Length**: 1-64 ASCII characters
 
 **Packet Types**:
 - `0x01` - Text message
 - `0x02` - File header (filename + size)
-- `0x03` - File chunk (sequence ID + 200 bytes data)
+- `0x03` - File chunk (sequence ID + data)
 
-**Checksum**: Simple sum of Type + Encrypted Payload bytes
+**Encryption**: XOR cipher with user key (default: "RADIO")  
+**Checksum**: Simple sum validation
 
-#### `AudioService.cs` - NAudio Interface
-**Transmission**:
-- Uses `BufferedWaveProvider` for gap-free multi-packet queueing
-- 10-minute buffer capacity for large file transfers
-- Background thread monitors buffer and fires completion event
-
-**Reception**:
-- Continuous audio capture via `WaveInEvent`
-- Mono, 44.1 kHz
-- Passes raw audio bytes to demodulator
-
-**Loopback Mode**:
-- Software-only mode for testing (no actual audio hardware)
-- Audio bytes immediately routed from modulator to demodulator
-
-#### `FileTransferService.cs` - File Chunking & Reassembly
-**Chunking**:
-- Maximum chunk size: **200 bytes** (payload only, not including protocol overhead)
-- Sequence IDs allow out-of-order reception and duplicate detection
-- First packet is always file header with metadata
-
-**Reassembly**:
-- Fixed-size buffer allocated based on file size from header
-- Uses HashSet to track received unique chunk IDs
-- No retransmission mechanism (fire-and-forget protocol)
-
-**Timeout Detection**:
-- **Silence timeout**: 10 seconds with no packets received
-- **Max time timeout**: Calculated as `chunks * 2.5 seconds + 10 seconds buffer`
-- Timer checks every 2 seconds
-
-**Image Compression**:
-- `.cimg` files are automatically decompressed on reception
-- 12-bit color format (4 bits per channel, 2 pixels per 3 bytes)
-- ~50% size reduction for images
-
-#### `ImageCompressionService.cs` - 12-bit Color Compression
-**Algorithm**:
-```
-RGB888 (24-bit) → RGB444 (12-bit)
-Input:  [R8][G8][B8] [R8][G8][B8] (6 bytes for 2 pixels)
-Output: [R4G4][B4R4][G4B4]       (3 bytes for 2 pixels)
-```
-
-**Quality Loss**: Each color channel reduced from 256 values to 16 values  
-**Use Case**: Faster transmission of images where quality loss is acceptable
-
-#### `MainViewModel.cs` - MVVM Coordinator
-**Key Responsibilities**:
-- Device selection and audio routing
-- Real-time input/output frequency and volume meters
-- Encryption key management and persistence
-- File transfer progress tracking
-- Transmission state management (prevents simultaneous send/receive)
-
-**Device Selection Logic**:
-```
-Index 0: Loopback (software mode)
-Index 1+: Real hardware devices (index - 1 = actual device number)
-```
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Requirements
+
 - **Windows 10/11** (WPF application)
-- **.NET 8.0 Runtime** (or SDK for development)
+- **.NET 8.0 Runtime** ([Download here](https://dotnet.microsoft.com/download/dotnet/8.0))
 - **Audio Hardware**:
   - Built-in mic/speakers (for testing)
   - Virtual Audio Cable (recommended for loopback testing)
-  - APRS-K2 or similar cable (for radio connection)
+  - APRS cable or audio interface (for radio connection)
 
-### Basic Operation
+### Installation
+
+1. Download the latest release or clone this repository
+2. Ensure .NET 8.0 Runtime is installed
+3. Run `RadioDataApp.exe`
+
+### Basic Usage
 
 1. **Select Audio Devices**:
-   - Choose **Input Device** (microphone/radio input)
-   - Choose **Output Device** (speakers/radio output)
+   - **Input Device**: Microphone or radio input
+   - **Output Device**: Speakers or radio output
    - For software testing, select "Loopback" for both
 
 2. **Set Encryption Key**:
-   - Both sender and receiver **must use the same key**
+   - Both sender and receiver must use the **same key**
    - Default: "RADIO"
-   - Key is saved automatically in `%LocalAppData%\RadioData\RadioData.settings.json`
+   - Automatically saved in `%LocalAppData%\RadioData\settings.json`
 
-3. **Advanced Tuning (NEW - Fixes Asymmetry)**:
-   - **Squelch Threshold** (0.000 - 0.100): Filter ambient noise, default 0.01
-     - Increase to 0.050 or higher if decoder processes background noise
-     - Look for high RMS values or random bytes during silence
-     - Should be below signal strength but above ambient noise
-   - **Input Gain** (0.5x - 2.0x): Amplify weak signals, default 1.0x
-     - Increase if signal too weak to decode
-     - Decrease if seeing clipping warnings
-   - **Zero-Crossing Threshold** (10-20): Tune for your hardware, default 14
-     - Lower value = more sensitive to Space (2200 Hz)
-     - Higher value = more sensitive to Mark (1200 Hz)
-     - Adjust if one direction works but not the other
-   - **Start Bit Compensation** (-5.0 to +5.0): Adjust timing, default -2.0
-     - Negative = more delay (slower detection)
-     - Positive = less delay (faster detection)
-     - Adjust if getting bit errors or garbled data
-
-4. **Transmit Text**:
+3. **Send Text**:
    - Type message (max 120 characters)
-   - Click **Send text**
-   - Monitor output meters for frequency (should show 1200-2200 Hz)
+   - Click **Send Text**
+   - Monitor output meters (should show 1200-2200 Hz alternating)
 
-5. **Transmit File**:
-   - Click **Send file** and select file
-   - Check **Compress images** for .jpg/.png files (optional)
-   - App shows progress and estimated time
-   - Large files: confirm transmission time estimate
+4. **Send File**:
+   - Click **Send File** and select a file
+   - Optionally enable **Compress Images** for .jpg/.png files
+   - Confirm transmission time estimate for large files
+   - Files are saved to `ReceivedFiles` folder automatically
 
-6. **Receive**:
-   - App automatically listens on selected input device
-   - Received text appears in System Log
-   - Received files saved to `ReceivedFiles` folder
-   - Click **Open Received Files** to view folder
+### Advanced Tuning
 
----
+Open the **Advanced Tuning** section to adjust parameters for your specific hardware:
 
-## 🛠️ Troubleshooting
+- **Squelch Threshold** (0.000 - 0.100): Minimum signal strength to decode (default: 0.01)
+  - Increase to 0.05+ if decoder processes background noise
+  - Should be below signal strength but above ambient noise
 
-### Symptom: One Direction Works, Other Doesn't
+- **Input Gain** (0.5x - 2.0x): Amplify weak signals (default: 1.0x)
+  - Increase to 1.5x for weak signals
+  - Decrease to 0.8x if seeing clipping warnings
 
-**Root Cause**: This is the main known issue - asymmetric demodulation reliability.
+- **Zero-Crossing Threshold** (10-20): Distinguishes 1200 Hz from 2200 Hz (default: 14)
+  - Lower = more sensitive to Space (2200 Hz)
+  - Higher = more sensitive to Mark (1200 Hz)
+  - Adjust if one direction works but not the other
 
-**✅ FIXED**: You can now tune parameters to fix this!
+- **Start Bit Compensation** (-5.0 to +5.0): Timing offset (default: -2.0)
+  - Negative = more delay (slower detection)
+  - Positive = less delay (faster detection)
+  - Adjust if getting garbled data
+
+## Troubleshooting
+
+### One Direction Works, Other Doesn't
+
+This is typically caused by differences in audio hardware characteristics between sender and receiver.
 
 **Solution Steps**:
 
-1. **Check for ambient noise first:**
-   - Look at System Log for RMS values during silence
-   - If seeing `[RMS: 0.1XXX]` or higher with no transmission, you have noise
-   - If seeing random `[00]`, `[FC]`, etc. bytes without transmission, increase squelch
-   - **Try Squelch Threshold = 0.050** (5%) to filter ambient noise
-   - Only lower squelch if actual signals fail to decode
+1. **Check for ambient noise**:
+   - Look at System Log for random bytes or high RMS values during silence
+   - Try **Squelch Threshold = 0.05** to filter noise
 
-2. **Start with defaults:**
-   - Zero-Crossing Threshold: 14
+2. **Start with defaults**:
+   - Zero-Crossing: 14
    - Start Bit Compensation: -2.0
    - Input Gain: 1.0x
-   - Squelch Threshold: 0.01 (increase if noisy environment)
+   - Squelch: 0.01
 
-3. **If receiving fails in one direction**:
-   - Open "Advanced Tuning" section in UI
-   - **Check RMS levels** - if consistently high (>0.02) during silence, increase squelch
-   - **Try Input Gain = 1.5x** (amplifies weak signals)
-     - Watch System Log for clipping warnings
-     - If clipping occurs, reduce to 1.2x
-   - **Try Zero-Crossing Threshold = 12** (more sensitive to higher frequencies)
-   - **Try Start Bit Compensation = -3.0** (adds more detection delay)
+3. **If receiving fails**:
+   - Try **Input Gain = 1.5x** (watch for clipping warnings)
+   - Try **Zero-Crossing = 12** (more sensitive to high frequencies)
+   - Try **Start Bit Compensation = -3.0**
 
-4. **If getting garbled/corrupted data**:
-   - **First check:** Are you getting data during silence? → Increase squelch to 0.05-0.10
-   - **Try Input Gain = 0.8x** (reduces overly strong signal)
-   - **Try Zero-Crossing Threshold = 16** (less sensitive to noise)
-   - **Try Start Bit Compensation = -1.0** (less delay)
+4. **If getting garbled data**:
+   - First check: Are you receiving random bytes during silence? → Increase squelch to 0.05-0.10
+   - Try **Input Gain = 0.8x**
+   - Try **Zero-Crossing = 16**
+   - Try **Start Bit Compensation = -1.0**
 
-5. **Systematic approach** (most reliable):
-   ```
-   Step 1: Set squelch above ambient noise (monitor RMS during silence)
-   
-   Step 2: For each Zero-Crossing value from 10 to 20:
-     - Send 10 test messages
-     - Count successes
-   
-   Use the threshold with best success rate
-   
-   Step 3: Test Start Bit Compensation from -5 to +5
-   ```
+### Radio and Sound Card Compatibility
 
-6. **Monitor indicators**:
-   - System Log shows `[WARNING] Input gain too high` if clipping
-   - RMS levels should be 0.01 to 0.5 (not near 1.0)
-   - No RMS logging during silence = squelch working correctly
-   - Settings logged when changed: `[Settings] Squelch threshold: 0.050`
+**Important**: Even radios of the same model (e.g., Baofeng UV-5R) may require different settings:
 
-**Old Workarounds** (still valid):
-- **Swap radio positions** (transmitter becomes receiver)
-- **Use same audio interface model** on both sides if possible
-- **Test with virtual audio cable** to isolate hardware vs software issues
+- **Volume Level**: Some radios output hotter audio than others - adjust radio volume or Input Gain
+- **Input Gain**: Different sound cards have different sensitivity - adjust Input Gain to compensate
+- **Machine-to-Machine Variation**: The same radio may behave differently on two computers with different sound cards
+- **VOX Sensitivity**: Some radios need higher output volume to trigger VOX reliably
+
+**Tips**:
+- Test with loopback mode first to verify software is working
+- Use same brand/model of sound cards on both sides if possible
+- Start with radio volume at 50% and adjust Input Gain instead
+- Monitor RMS levels in System Log - aim for 0.01 to 0.5 (not near 1.0)
+
+### Common Issues
+
+| Problem | Solution |
+|---------|----------|
+| No audio output | Check output device selection, verify not in loopback mode |
+| No audio input detected | Check input device selection, verify microphone permissions |
+| Checksum failures | Increase Input Gain or adjust Zero-Crossing Threshold |
+| Random bytes during silence | Increase Squelch Threshold to 0.05 or higher |
+| Clipping warnings | Reduce Input Gain below 1.0x |
+| VOX not triggering | Increase radio output volume or output amplitude |
+
+## Technical Details
+
+### Modulation Parameters
+
+- **Baud Rate**: 250 baud (4ms per bit)
+- **Mark Frequency**: 1200 Hz (binary 1)
+- **Space Frequency**: 2200 Hz (binary 0)
+- **Sample Rate**: 44.1 kHz
+- **Amplitude**: 25% of maximum (optimized for radio VOX)
+- **Preamble**: 1200ms of alternating tones before each transmission
+
+### Protocol Specifications
+
+- **Maximum Packet Size**: 255 bytes (including overhead)
+- **Maximum Payload**: ~240 bytes per packet
+- **File Chunk Size**: 200 bytes
+- **Transmission Speed**: ~250 bits/second (~31 bytes/second)
+- **Estimated Time**: ~9.5 seconds per file packet (including overhead)
+
+### File Transfer
+
+Files are split into 200-byte chunks and transmitted sequentially. Each chunk includes a sequence ID for reassembly. The receiver tracks received chunks and reports progress. Timeout detection alerts if transfer stalls.
+
+**Timeout Settings**:
+- Silence timeout: 10 seconds without packets
+- Max time: Calculated as `chunks × 9.5s + 10s buffer`
+
+### Architecture
+
+- **MVVM Pattern**: Clean separation of UI and business logic
+- **NAudio**: Audio I/O and buffering
+- **CommunityToolkit.MVVM**: Modern MVVM helpers
+- **MaterialDesignThemes**: Modern UI components
+
+## Building from Source
+
+### Prerequisites
+
+- Visual Studio 2022 or later
+- .NET 8.0 SDK
+- Windows 10/11
+
+### Dependencies
+
+- NAudio 2.2.1
+- CommunityToolkit.Mvvm 8.4.0
+- MaterialDesignThemes 5.3.0
+
+### Build Steps
+
+```bash
+git clone https://github.com/MDReptile/RadioData.git
+cd RadioData
+dotnet build RadioDataApp/RadioDataApp.csproj
+dotnet run --project RadioDataApp/RadioDataApp.csproj
+```
+
+## License
+
+This project is open source. Feel free to use, modify, and distribute.
+
+## Acknowledgments
+
+Built using Google Antigravity AI-assisted development with Gemini 2.0 Flash Thinking and Claude Sonnet 4.5. The majority of code was generated through natural language prompts and vibe coding, with minimal manual intervention.
+
+---
+
+**Version**: 0.10  
+**Status**: Working - optimized for various hardware configurations
