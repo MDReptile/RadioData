@@ -277,8 +277,9 @@ namespace RadioDataApp.ViewModels
             // Hook up RMS level logging for signal diagnostics (only when signal present)
             _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
             {
-                // Only log if signal is strong enough to be meaningful
-                if (rms >= 0.02f) // 2% threshold - actual signal, not just noise
+                // Only log RMS if it's above squelch threshold (actual signal being processed)
+                // Use slightly lower threshold for logging so we can see what's being filtered
+                if (rms >= _modem.SquelchThreshold * 0.5f) // Log at half of squelch threshold
                 {
                     DebugLog += $"[RMS: {rms:F3}] ";
                     
@@ -402,9 +403,6 @@ namespace RadioDataApp.ViewModels
                 var packet = _modem.Demodulate(audioData);
                 if (packet != null)
                 {
-                    // Log successful decode
-                    Console.WriteLine($"[✓ Demod] {packet.Type}, {packet.Payload.Length} bytes");
-
                     switch (packet.Type)
                     {
                         case CustomProtocol.PacketType.Text:
