@@ -431,7 +431,17 @@
 
         <!-- Status Bar -->
         <StatusBar Grid.Row="2" Background="{StaticResource TerminalGray}" Foreground="{StaticResource TerminalGreen}">
-            <TextBlock Text="{Binding StatusMessage}" Margin="10,0" FontFamily="Consolas"/>
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <DockPanel LastChildFill="True"/>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" Margin="10,0" FontFamily="Consolas"/>
+            </StatusBarItem>
+            <StatusBarItem DockPanel.Dock="Right">
+                <TextBlock Text="{Binding AppVersion}" Margin="10,0" FontFamily="Consolas" FontSize="10" Opacity="0.7"/>
+            </StatusBarItem>
         </StatusBar>
     </Grid>
 </Window>

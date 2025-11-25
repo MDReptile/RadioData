@@ -49,6 +49,25 @@
     {
       "AbsoluteMoniker": "D:0:0:{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}|Solution Items{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}|G:\\GoogleAntigravityProjects\\RadioData\\README.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
       "RelativeMoniker": "D:0:0:{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}|Solution Items{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}|solutionrelative:README.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|G:\\GoogleAntigravityProjects\\RadioData\\increment-version.bat||{3B902123-F8A7-4915-9F01-361F908088D0}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:increment-version.bat||{3B902123-F8A7-4915-9F01-361F908088D0}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|G:\\GoogleAntigravityProjects\\RadioData\\increment-version.ps1||{3B902123-F8A7-4915-9F01-361F908088D0}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:increment-version.ps1||{3B902123-F8A7-4915-9F01-361F908088D0}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\MDR\\AppData\\Local\\Temp\\CopilotBaseline\\Deleted\\652387259\\RadioDataApp.csproj||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|g:\\googleantigravityprojects\\radiodata\\radiodataapp\\radiodataapp.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{ECD38C9F-F83E-4B81-B680-B3BDA11319A7}|RadioDataApp\\RadioDataApp.csproj|solutionrelative:radiodataapp\\radiodataapp.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|G:\\GoogleAntigravityProjects\\RadioData\\.git\\hooks\\pre-push||{8B382828-6202-11D1-8870-0000F87579D2}|",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.git\\hooks\\pre-push||{8B382828-6202-11D1-8870-0000F87579D2}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -58,8 +77,71 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 12,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "pre-push",
+              "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\.git\\hooks\\pre-push",
+              "RelativeDocumentMoniker": ".git\\hooks\\pre-push",
+              "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\.git\\hooks\\pre-push",
+              "RelativeToolTip": ".git\\hooks\\pre-push",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-11-25T05:03:53.07Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "RadioDataApp",
+              "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\RadioDataApp.csproj",
+              "RelativeDocumentMoniker": "RadioDataApp\\RadioDataApp.csproj",
+              "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\RadioDataApp.csproj",
+              "RelativeToolTip": "RadioDataApp\\RadioDataApp.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-11-25T05:03:43.18Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "RadioDataApp.csproj",
+              "DocumentMoniker": "C:\\Users\\MDR\\AppData\\Local\\Temp\\CopilotBaseline\\Deleted\\652387259\\RadioDataApp.csproj",
+              "ToolTip": "C:\\Users\\MDR\\AppData\\Local\\Temp\\CopilotBaseline\\Deleted\\652387259\\RadioDataApp.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-11-25T05:03:35.776Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "increment-version.ps1",
+              "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\increment-version.ps1",
+              "RelativeDocumentMoniker": "increment-version.ps1",
+              "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\increment-version.ps1",
+              "RelativeToolTip": "increment-version.ps1",
+              "ViewState": "AgIAACMAAAAAAAAAAABRwCYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-11-25T05:00:27.241Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "increment-version.bat",
+              "DocumentMoniker": "G:\\GoogleAntigravityProjects\\RadioData\\increment-version.bat",
+              "RelativeDocumentMoniker": "increment-version.bat",
+              "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\increment-version.bat",
+              "RelativeToolTip": "increment-version.bat",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC8AAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAQ5SURBVFhH7ZZbbBRVGMd/szO73Xa73W63XaDtFrKkgLWiqVBCUaQhXp6Mhhc08VUNb0bCzaiExKgJiU8m\u002Bu6jiSXhqrQFodyktEAJUEhr2NIbtLTd\u002B8ycc3wQjIwbM5SKfeD3\u002BM33/fPLNzlzBuYTSiln6SnzHm3N6tUtCvUiUOR8\u002BKTRoEvbuW3rGYV6AfA5G/4rgsEyAqWlKKXIZrNEIhGGErewTOuYB401T1IGwDTzpFMp0ukUZj7H9NQUQgjQaNF2bt\u002Bq3v9gy7w4bt9/9y3azu1b1e49X8wLoc8/3YXHWXTDvekkXef72H/0FKe6\u002B7Bt4WyZNa6ElFIIIcnlTUzTYiaZJp3JIpRkfGKSVCZD3rTIZnOPLedSCEbvTtJ9uZ\u002B\u002B/kESI\u002BNksjmEkEghudI/QG/fdU6eu8it4bHHugFcCdlCcGNwiInpaRIjY9yZnEJJgRQ2Qghuj9xhMDHM3XtTDN4aIpvLOSNc40pIKYWuacj7GwFFVaSc\u002BOIaQmUBpJRIKVBKons0hJDOCNe4EvJ5DZbFYxQX\u002BZBCUOL3E19Sy3MrlhKvq0GhkEJSUuzn2eVLCZQUOyNc40oIQNd1hBAIIbGFjQZ4DQND15FCIITAtkwsW\u002BDxuI79B64mLcvibM9lUqkMQgqSMym6L13lxJkLXLh0FcuyEFIwk0xz8co1pqZnnBGucSXk0XUsIRDSRiqBbdtM3ptiIHGb6WQSKcRfW7JMmyLf7G8iV0K6x0NjfRzd4yEcDBIqC/x5yiwLYQsWLqgkFAxSXFxMfEktmVyW8bsT5PP5R/4E6C\u002B/1LJ7Q\u002BtGZ/0hNE0jXF5GfbyOZ\u002BrjeDSN0fEJTMsEDV7fsI6VDcupWVQFKH74sY19B49gGAZVkQhSSryGgaZpzuiHONbZ7m5D3Jd68CqCpQEWRCsIh0LU1VRTGiihf/B3Drf/ytnuXkZGxxC2xaW\u002BK7TtP0jb/kOk0xlnZEFcC/2dyoowzU0rWb92FevXrkLXDTpOnOa3nh5OnTtPJFxOw7J6RsfG6TzRxaGff\u002BHmwIAzpiCzEjIMnWAgQFVlBf4iH5oGS2LVgCIcKuPNN15l86a3aHq\u002BEa\u002BhE6uppiwYdMYUZFZChYhGwtiWRZHPS/XCKNGqSiIVYTQkPkMnXB5yjhRkzoQOH\u002B3EzOcZHh7mwJGj7DtwiJNdp0nOJLnRf5Or1647RwoyZ0LxxTGkEORyWTqPH\u002Bentn0kEkMIy8Lr9bJo0ULnSEHmTGjzprfZ88k2PtryIX5fEal0itc2trL3qy/5Zu/XLK6rc44UZM6EvF4vsdpaotEo69Y2s7KxkYaGFcRiNVRUhF3fb\u002B66HoGqygjvvfsOn\u002B3awaqmJnRdd7b8Kx5QpmVZzvoT54GDtmP7x52trRtf8ftn/w8zF\u002BRy2XxHR3uv1ty8ugWlWpwN/wN5NLqdxac85VH5A2qY1kN5LkahAAAAAElFTkSuQmCC",
+              "WhenOpened": "2025-11-25T05:00:14.771Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Document",
               "DocumentIndex": 1,
@@ -152,7 +234,7 @@
               "RelativeDocumentMoniker": "RadioDataApp\\ViewModels\\MainViewModel.cs",
               "ToolTip": "G:\\GoogleAntigravityProjects\\RadioData\\RadioDataApp\\ViewModels\\MainViewModel.cs",
               "RelativeToolTip": "RadioDataApp\\ViewModels\\MainViewModel.cs",
-              "ViewState": "AgIAAJICAAAAAAAAAIAwwHoBAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAIgCAAAAAAAAAIAwwKgCAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-25T03:10:41.232Z",
               "EditorCaption": ""

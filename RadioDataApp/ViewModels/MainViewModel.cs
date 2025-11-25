@@ -26,6 +26,8 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready";
 
+        public string AppVersion { get; } = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(2) ?? "0.01"}";
+
         public ObservableCollection<string> InputDevices { get; } = [];
         public ObservableCollection<string> OutputDevices { get; } = [];
 
