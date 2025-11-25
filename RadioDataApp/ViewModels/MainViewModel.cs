@@ -179,6 +179,63 @@ namespace RadioDataApp.ViewModels
             // Load saved settings
             var settings = _settingsService.LoadSettings();
             _encryptionKey = settings.EncryptionKey;
+            CustomProtocol.EncryptionKey = _encryptionKey;
+            Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
+
+            // Wire up service events
+            _fileTransferService.ProgressChanged += (s, p) => TransferProgress = p * 100;
+            _fileTransferService.DebugMessage += (s, msg) => Application.Current.Dispatcher.Invoke(() => DebugLog += msg + "\n");
+            _fileTransferService.FileReceived += (s, path) => Application.Current.Dispatcher.Invoke(() =>
+            {
+                StatusMessage = $"File received: {Path.GetFileName(path)}";
+                TransferStatus = "Receive Complete";
+                IsReceiving = false;
+                DebugLog += $"[FILE] Saved to: {path}\n";
+            });
+            _fileTransferService.TimeoutOccurred += (s, msg) => Application.Current.Dispatcher.Invoke(() =>
+            {
+                IsReceiving = false;
+                DebugLog += $"[TIMEOUT] {msg}\n";
+            });
+
+            // Hook up raw byte logging for debugging
+            _modem.RawByteReceived += (s, b) => Application.Current.Dispatcher.Invoke(() =>
+            {
+                // Only log printable characters or hex for control chars
+                char c = (char)b;
+                string display = (c >= 32 && c <= 126) ? c.ToString() : $"[{b:X2}]";
+                DebugLog += display;
+            });
+
+            _audioService.AudioDataReceived += OnAudioDataReceived;
+            _audioService.TransmissionCompleted += (s, e) =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (!IsTransferring)
+                    {
+                        StatusMessage = "Transmission Complete";
+                        IsTransmitting = false;
+                    }
+                });
+            };
+
+            LoadDevices();
+        }
+
+        private void LoadDevices()
+        {
+            InputDevices.Clear();
+            OutputDevices.Clear();
+
+            // Add loopback option as first item
+            InputDevices.Add("0: Loopback (Software)");
+            OutputDevices.Add("0: Loopback (Software)");
+
+            var inputs = AudioService.GetInputDevices();
+            for (int i = 0; i < inputs.Count; i++)
+                InputDevices.Add($"{i + 1}: {inputs[i].ProductName}");
+
             var outputs = AudioService.GetOutputDevices();
             for (int i = 0; i < outputs.Count; i++)
                 OutputDevices.Add($"{i + 1}: {outputs[i].ProductName}");
@@ -186,27 +243,6 @@ namespace RadioDataApp.ViewModels
             // Default to first real device (index 1 = first hardware device)
             if (InputDevices.Count > 1) SelectedInputDeviceIndex = 1;
             if (OutputDevices.Count > 1) SelectedOutputDeviceIndex = 1;
-
-            _audioService.AudioDataReceived += OnAudioDataReceived;
-            _audioService.TransmissionCompleted += (s, e) =>
-            {
-                // Don't cancel visualization here - let it finish naturally
-                // _visualizationCts?.Cancel(); 
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    if (!IsTransferring)
-                    {
-                        StatusMessage = "Transmission Complete";
-                        IsTransmitting = false;
-                        // Don't reset meters immediately, let visualization finish
-                        // OutputFrequency = 0;
-                        // OutputVolume = 0;
-                    }
-                });
-            };
-
-            // Device selection will trigger OnSelectedInputDeviceIndexChanged which handles loopback mode
         }
 
         private void OnAudioDataReceived(object? sender, byte[] audioData)
