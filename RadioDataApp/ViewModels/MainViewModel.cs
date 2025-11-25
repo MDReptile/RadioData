@@ -214,8 +214,34 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private bool _isTransmitting;
 
+        partial void OnIsTransmittingChanged(bool value)
+        {
+            // Notify UI that CanTransmit status may have changed
+            StartTransmissionCommand.NotifyCanExecuteChanged();
+            SendFileCommand.NotifyCanExecuteChanged();
+        }
+
         [ObservableProperty]
         private bool _isReceiving;
+
+        partial void OnIsReceivingChanged(bool value)
+        {
+            // Notify UI that CanTransmit status may have changed
+            StartTransmissionCommand.NotifyCanExecuteChanged();
+            SendFileCommand.NotifyCanExecuteChanged();
+            
+            // Update status message
+            if (value)
+            {
+                StatusMessage = "Receiving...";
+            }
+            else if (!IsTransmitting)
+            {
+                StatusMessage = "Ready";
+            }
+        }
+
+        private CancellationTokenSource? _receiveSilenceTimeout;
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
@@ -257,11 +283,13 @@ namespace RadioDataApp.ViewModels
                 StatusMessage = $"File received: {Path.GetFileName(path)}";
                 TransferStatus = "Receive Complete";
                 IsReceiving = false;
+                IsTransferring = false;
                 DebugLog += $"[FILE] Saved to: {path}\n";
             });
             _fileTransferService.TimeoutOccurred += (s, msg) => Application.Current.Dispatcher.Invoke(() =>
             {
                 IsReceiving = false;
+                IsTransferring = false;
                 DebugLog += $"[TIMEOUT] {msg}\n";
             });
 
@@ -274,20 +302,13 @@ namespace RadioDataApp.ViewModels
                 DebugLog += display;
             });
 
-            // Hook up RMS level logging for signal diagnostics (only when signal present)
+            // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += (s, rms) => Application.Current.Dispatcher.Invoke(() =>
             {
-                // Only log RMS if it's above squelch threshold (actual signal being processed)
-                // Use slightly lower threshold for logging so we can see what's being filtered
-                if (rms >= _modem.SquelchThreshold * 0.5f) // Log at half of squelch threshold
+                // Only warn if signal is too strong (causes distortion)
+                if (rms > 0.15f)
                 {
-                    DebugLog += $"[RMS: {rms:F3}] ";
-                    
-                    // Warn if signal is too strong
-                    if (rms > 0.15f)
-                    {
-                        DebugLog += "[⚠ STRONG] ";
-                    }
+                    DebugLog += $"[⚠ SIGNAL TOO STRONG: {rms:F3}] Reduce input gain or system volume!\n";
                 }
             });
 
@@ -399,6 +420,38 @@ namespace RadioDataApp.ViewModels
                 if (InputVolume > 0.05 && freq >= 500 && freq <= 3000)
                     InputFrequency = freq;
 
+                // Check if there's signal above squelch threshold
+                float normalizedRms = (float)(rms / 32768.0);
+                if (normalizedRms >= _modem.SquelchThreshold)
+                {
+                    // Signal detected - set receiving flag
+                    if (!IsReceiving && !IsTransferring)
+                    {
+                        IsReceiving = true;
+                    }
+
+                    // Cancel any existing silence timeout
+                    _receiveSilenceTimeout?.Cancel();
+                    
+                    // Start new silence timeout (2 seconds)
+                    _receiveSilenceTimeout = new CancellationTokenSource();
+                    var token = _receiveSilenceTimeout.Token;
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(2000, token);
+                        if (!token.IsCancellationRequested)
+                        {
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                if (!IsTransferring)
+                                {
+                                    IsReceiving = false;
+                                }
+                            });
+                        }
+                    }, token);
+                }
+
                 // 3. Demodulate
                 var packet = _modem.Demodulate(audioData);
                 if (packet != null)
@@ -410,7 +463,7 @@ namespace RadioDataApp.ViewModels
                             break;
                         case CustomProtocol.PacketType.FileHeader:
                             DebugLog += "\n=== RECEIVING FILE ===\n";
-                            IsReceiving = true; // Disable transmission during reception
+                            IsTransferring = true; // Mark as file transfer in progress
                             _fileTransferService.HandlePacket(packet);
                             break;
                         case CustomProtocol.PacketType.FileChunk:
