@@ -55,8 +55,8 @@ namespace RadioDataApp.Modem
                 AddTone(samples, MarkFreq, 1000.0 / BaudRate);
             }
 
-            // Postamble/Tail - 300ms for distinct end tone
-            AddTone(samples, MarkFreq, 300);
+            // Postamble/Tail - keep VOX open until receiver processes data
+            AddTone(samples, MarkFreq, 800);
 
             return samples.ToArray();
         }
