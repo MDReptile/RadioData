@@ -496,9 +496,9 @@ namespace RadioDataApp.ViewModels
 
                     for (int i = 0; i < total; i++)
                     {
-                        // 2. Modulate packet (Preamble only on first, 2s for radio VOX)
+                        // 2. Modulate packet (Preamble only on first, 2.5s for radio VOX)
                         bool preamble = i == 0;
-                        int preambleDuration = preamble ? 2000 : 0; // 2 seconds for file header
+                        int preambleDuration = preamble ? 2500 : 0; // 2.5 seconds for file header
                         var audio = _modem.Modulate(packets[i], preamble, preambleDuration);
 
                         // 3. Queue audio immediately

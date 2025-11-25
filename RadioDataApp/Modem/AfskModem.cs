@@ -27,12 +27,12 @@ namespace RadioDataApp.Modem
         // Modulation State
         private double _phase = 0;
 
-        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1000)
+        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1250)
         {
             List<byte> samples = [];
             _phase = 0; // Reset phase for new transmission
 
-            // Preamble (Sync) - Only if needed to wake VOX
+            // Preamble (Sync) - wake up VOX before data
             if (includePreamble)
             {
                 AddTone(samples, MarkFreq, preambleDurationMs);
