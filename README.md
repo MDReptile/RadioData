@@ -238,6 +238,10 @@ Index 1+: Real hardware devices (index - 1 = actual device number)
    - Key is saved automatically in `%LocalAppData%\RadioData\RadioData.settings.json`
 
 3. **Advanced Tuning (NEW - Fixes Asymmetry)**:
+   - **Squelch Threshold** (0.000 - 0.100): Filter ambient noise, default 0.01
+     - Increase to 0.050 or higher if decoder processes background noise
+     - Look for high RMS values or random bytes during silence
+     - Should be below signal strength but above ambient noise
    - **Input Gain** (0.5x - 2.0x): Amplify weak signals, default 1.0x
      - Increase if signal too weak to decode
      - Decrease if seeing clipping warnings
@@ -279,39 +283,52 @@ Index 1+: Real hardware devices (index - 1 = actual device number)
 
 **Solution Steps**:
 
-1. **Start with defaults**:
+1. **Check for ambient noise first:**
+   - Look at System Log for RMS values during silence
+   - If seeing `[RMS: 0.1XXX]` or higher with no transmission, you have noise
+   - If seeing random `[00]`, `[FC]`, etc. bytes without transmission, increase squelch
+   - **Try Squelch Threshold = 0.050** (5%) to filter ambient noise
+   - Only lower squelch if actual signals fail to decode
+
+2. **Start with defaults:**
    - Zero-Crossing Threshold: 14
    - Start Bit Compensation: -2.0
    - Input Gain: 1.0x
+   - Squelch Threshold: 0.01 (increase if noisy environment)
 
-2. **If receiving fails in one direction**:
+3. **If receiving fails in one direction**:
    - Open "Advanced Tuning" section in UI
+   - **Check RMS levels** - if consistently high (>0.02) during silence, increase squelch
    - **Try Input Gain = 1.5x** (amplifies weak signals)
      - Watch System Log for clipping warnings
      - If clipping occurs, reduce to 1.2x
    - **Try Zero-Crossing Threshold = 12** (more sensitive to higher frequencies)
    - **Try Start Bit Compensation = -3.0** (adds more detection delay)
 
-3. **If getting garbled/corrupted data**:
+4. **If getting garbled/corrupted data**:
+   - **First check:** Are you getting data during silence? → Increase squelch to 0.05-0.10
    - **Try Input Gain = 0.8x** (reduces overly strong signal)
    - **Try Zero-Crossing Threshold = 16** (less sensitive to noise)
    - **Try Start Bit Compensation = -1.0** (less delay)
 
-4. **Systematic approach** (most reliable):
+5. **Systematic approach** (most reliable):
    ```
-   For each Zero-Crossing value from 10 to 20:
+   Step 1: Set squelch above ambient noise (monitor RMS during silence)
+   
+   Step 2: For each Zero-Crossing value from 10 to 20:
      - Send 10 test messages
      - Count successes
    
    Use the threshold with best success rate
    
-   Then test Start Bit Compensation from -5 to +5
+   Step 3: Test Start Bit Compensation from -5 to +5
    ```
 
-5. **Monitor indicators**:
+6. **Monitor indicators**:
    - System Log shows `[WARNING] Input gain too high` if clipping
    - RMS levels should be 0.01 to 0.5 (not near 1.0)
-   - Settings logged when changed: `[Settings] Zero-crossing threshold: 12`
+   - No RMS logging during silence = squelch working correctly
+   - Settings logged when changed: `[Settings] Squelch threshold: 0.050`
 
 **Old Workarounds** (still valid):
 - **Swap radio positions** (transmitter becomes receiver)

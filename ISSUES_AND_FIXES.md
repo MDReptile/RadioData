@@ -399,6 +399,55 @@ byte[] audio = _modem.Modulate(packet, true, PreambleDurationMs);
 
 ---
 
+## How to Use the Fixes
+
+### Tuning for Asymmetry Issues
+
+If you experience one-way communication problems:
+
+1. **Start with defaults** (Zero-Crossing: 14, Start Bit: -2.0, Input Gain: 1.0x, Squelch: 0.01)
+
+2. **Check for ambient noise FIRST** (NEW - Most Common Issue):
+   - Run application with no transmission
+   - Watch System Log for `[RMS: X.XXXX]` values
+   - If RMS > 0.02 during silence, you have noise problem
+   - If seeing random bytes like `[00][FC]` without transmission, increase squelch
+   - **Try Squelch = 0.050** (blocks noise up to 5% signal strength)
+   - If still seeing garbage: try 0.080 or 0.100
+   - Goal: Squelch above noise floor, below actual signal
+
+3. **If receiving fails but sending works**:
+   - Try **Input Gain = 1.5x** (amplify weak signal)
+   - If that helps but causes clipping warning, reduce to 1.2x
+   - Try **Zero-Crossing Threshold = 12** (more sensitive to Space frequency)
+   - Try **Start Bit Compensation = -3.0** (more delay for slower detection)
+
+4. **If receiving works but decodes incorrectly**:
+   - Try **Input Gain = 0.8x** (reduce if signal too strong/clipping)
+   - Try **Zero-Crossing Threshold = 16** (more sensitive to Mark frequency)
+   - Try **Start Bit Compensation = -1.0** (less delay for faster detection)
+
+5. **Systematic testing** (recommended):
+   ```
+   Step 1: Measure ambient noise RMS during silence
+   Step 2: Set squelch to (max_noise_rms * 1.5)
+   
+   Step 3: For threshold = 10 to 20:
+     - Send 10 test messages
+     - Record success rate   
+   ```
+   Use threshold with highest success rate
+   
+   Step 4: Repeat for Start Bit Compensation from -5 to +5
+   ```
+
+6. **Monitor System Log**:
+   - Watch for `[WARNING] Input gain too high` messages
+   - Check RMS levels (should be 0.01 to 0.5, not near 1.0)
+   - No RMS during silence = squelch working correctly
+   - Watch for checksum mismatches (wrong key or signal corruption)
+   - Settings changes logged: `[Settings] Squelch threshold: 0.050`
+
 ## Testing Recommendations
 
 ### To Verify Asymmetry Issue
@@ -514,6 +563,19 @@ byte[] audio = _modem.Modulate(packet, true, PreambleDurationMs);
 
 ## Fixes Applied (Latest Build)
 
+### ? Issue #7: Ambient Noise Causing False Decodes (NEW)
+**Status**: RESOLVED  
+**Implementation**: Added `SquelchThreshold` property (default: 0.01, range: 0.0-0.1)
+- Users can now filter ambient noise that triggers false decode attempts
+- Critical fix for asymmetry caused by different noise environments
+- One client may have quiet room (low squelch OK), other has noisy environment (needs higher squelch)
+- UI slider in "Advanced Tuning" section (0.000-0.100 range)
+- Prevents decoder from processing electrical noise, fans, static
+- Logged to System Log when changed
+- Example: Client with RMS 0.127-0.423 during silence should use squelch 0.050-0.080
+
+**Diagnostic**: Look for high `[RMS: X.XXXX]` values or random `[00][FC]` bytes when NOT transmitting. This indicates ambient noise being decoded. Increase squelch above highest noise level but below actual signal strength.
+
 ### ? Issue #1: Fixed Zero-Crossing Threshold
 **Status**: RESOLVED  
 **Implementation**: Added `ZeroCrossingThreshold` property (default: 14, range: 10-20)
@@ -554,70 +616,3 @@ byte[] audio = _modem.Modulate(packet, true, PreambleDurationMs);
 **Status**: DOCUMENTED (future enhancement)
 - Currently: Text = 1200ms, File header = 1200ms, File chunks = 0ms
 - For future: Add `PreambleDurationMs` property with UI slider (500-2000ms)
-
----
-
-## How to Use the Fixes
-
-### Tuning for Asymmetry Issues
-
-If you experience one-way communication problems:
-
-1. **Start with defaults** (Zero-Crossing: 14, Start Bit: -2.0, Input Gain: 1.0x)
-
-2. **If receiving fails but sending works**:
-   - Try **Input Gain = 1.5x** (amplify weak signal)
-   - If that helps but causes clipping warning, reduce to 1.2x
-   - Try **Zero-Crossing Threshold = 12** (more sensitive to Space frequency)
-   - Try **Start Bit Compensation = -3.0** (more delay for slower detection)
-
-3. **If receiving works but decodes incorrectly**:
-   - Try **Input Gain = 0.8x** (reduce if signal too strong/clipping)
-   - Try **Zero-Crossing Threshold = 16** (more sensitive to Mark frequency)
-   - Try **Start Bit Compensation = -1.0** (less delay for faster detection)
-
-4. **Systematic testing** (recommended):
-   ```
-   For threshold = 10 to 20:
-     - Send 10 test messages
-     - Record success rate
-   
-   Use threshold with highest success rate
-   
-   Repeat for Start Bit Compensation from -5 to +5
-   ```
-
-5. **Monitor System Log**:
-   - Watch for `[WARNING] Input gain too high` messages
-   - Check RMS levels (should be 0.01 to 0.5, not near 1.0)
-   - Watch for checksum mismatches (wrong key or signal corruption)
-
-### Device Selection
-
-With the fixed loopback logic:
-
-- **Both Loopback**: Select "0: Loopback (Software)" for both input and output
-  - Pure software testing, no audio hardware used
-  
-- **Mixed Mode**: Input=Loopback, Output=Hardware Device
-  - Software generates audio, plays through speakers
-  - Useful for testing output only
-  
-- **Mixed Mode**: Input=Hardware Device, Output=Loopback
-  - Capture from microphone, software demodulates
-  - Useful for testing input only
-  
-- **Both Hardware**: Select device 1+ for both
-  - Normal operation with real audio hardware
-
----
-
-## Conclusion
-
-The main issue causing **asymmetric send/receive reliability** is the **fixed zero-crossing threshold** combined with **hardcoded timing compensation**. These values work well in ideal conditions but fail when audio hardware characteristics differ between sender and receiver.
-
-**Quick Fix**: ? **DONE** - Made threshold and compensation user-configurable  
-**Proper Fix**: ?? TODO - Implement adaptive calibration during preamble  
-**Best Fix**: ?? TODO - Replace zero-crossing with proper frequency detection (Goertzel algorithm)
-
-The code is well-structured and functional. With the new tuning controls, users can now optimize settings for their specific hardware configuration, greatly reducing asymmetry issues.

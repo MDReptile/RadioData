@@ -175,6 +175,17 @@ namespace RadioDataApp.ViewModels
         }
 
         [ObservableProperty]
+        private double _squelchThreshold = 0.01;
+
+        partial void OnSquelchThresholdChanged(double value)
+        {
+            _modem.SquelchThreshold = (float)value;
+            Console.WriteLine($"[Settings] Squelch threshold set to {value:F3}");
+            DebugLog += $"[Settings] Squelch threshold: {value:F3}\n";
+            SaveCurrentSettings();
+        }
+
+        [ObservableProperty]
         private string _encryptionKey = "RADIO";
 
         partial void OnEncryptionKeyChanged(string value)
@@ -220,17 +231,20 @@ namespace RadioDataApp.ViewModels
             _inputGain = settings.InputGain;
             _zeroCrossingThreshold = settings.ZeroCrossingThreshold;
             _startBitCompensation = settings.StartBitCompensation;
+            _squelchThreshold = settings.SquelchThreshold;
             _compressImages = settings.CompressImages;
             
             CustomProtocol.EncryptionKey = _encryptionKey;
             _modem.InputGain = (float)_inputGain;
             _modem.ZeroCrossingThreshold = _zeroCrossingThreshold;
             _modem.StartBitCompensation = _startBitCompensation;
+            _modem.SquelchThreshold = (float)_squelchThreshold;
             
             Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
             Console.WriteLine($"[Settings] Loaded input gain: {_inputGain}x");
             Console.WriteLine($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
             Console.WriteLine($"[Settings] Loaded start bit compensation: {_startBitCompensation}");
+            Console.WriteLine($"[Settings] Loaded squelch threshold: {_squelchThreshold:F3}");
             Console.WriteLine($"[Settings] Loaded compress images: {_compressImages}");
 
             // Wire up service events
@@ -333,6 +347,7 @@ namespace RadioDataApp.ViewModels
                 InputGain = InputGain,
                 ZeroCrossingThreshold = ZeroCrossingThreshold,
                 StartBitCompensation = StartBitCompensation,
+                SquelchThreshold = SquelchThreshold,
                 CompressImages = CompressImages
             };
             _settingsService.SaveSettings(settings);

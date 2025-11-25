@@ -11,7 +11,7 @@ namespace RadioDataApp.Modem
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
-        private const float SquelchThreshold = 0.01f; // Minimum RMS level to attempt decoding (1% of max)
+        private const float DefaultSquelchThreshold = 0.01f; // Minimum RMS level to attempt decoding (1% of max)
 
         // Demodulation State
         private float _lastSample = 0;
@@ -36,6 +36,9 @@ namespace RadioDataApp.Modem
 
         // Compensate for detection latency in Start Bit
         public double StartBitCompensation { get; set; } = -2.0; // Samples
+
+        // Configurable squelch threshold (0.0 to 1.0, default 0.01 = 1% of max signal)
+        public float SquelchThreshold { get; set; } = DefaultSquelchThreshold;
 
         // Event for raw byte debugging
         public event EventHandler<byte>? RawByteReceived;

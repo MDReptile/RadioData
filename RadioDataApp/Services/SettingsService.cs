@@ -17,6 +17,7 @@ namespace RadioDataApp.Services
             public double InputGain { get; set; } = 1.0;
             public int ZeroCrossingThreshold { get; set; } = 14;
             public double StartBitCompensation { get; set; } = -2.0;
+            public double SquelchThreshold { get; set; } = 0.01;
             public bool CompressImages { get; set; } = true;
         }
 
