@@ -16,6 +16,10 @@
 
 ---
 
+## Disclaimer
+- This is provided for educational purposes, and any use of this software is at your own risk.
+- Check local laws and regulations regarding radio transmission on whichever frequency / channel you are using.
+
 ## Features
 
 - **Text Messaging**: Send up to 120 characters of encrypted text over audio
@@ -97,6 +101,12 @@ RadioData uses **Audio Frequency Shift Keying (AFSK)** to encode digital data as
    - Optionally enable **Compress Images** for .jpg/.png files
    - Confirm transmission time estimate for large files
    - Files are saved to `ReceivedFiles` folder automatically
+  
+     ----- NOTE: If you are trying to use a radio and APRS cable, you want to enable VOX
+     which should allow your voice to trigger transmission, which allows the PC to transmit.
+     You want squelch setting on the radio to be low enough to pick up pretty easily, and
+     you should use a channel / frequency that isn't noisy or in use, otherwise transmission
+     may fail because of interference from other audio over the channel / frequency.
 
 ### Advanced Tuning
 
