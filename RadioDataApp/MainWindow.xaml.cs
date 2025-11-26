@@ -18,6 +18,8 @@ namespace RadioDataApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        public MainViewModel? ViewModel => DataContext as MainViewModel;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -44,6 +46,17 @@ namespace RadioDataApp
                 {
                     LogScrollViewer?.ScrollToBottom();
                 }, System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        private void TestLogInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // Hidden TextBox for UI test logging
+            if (sender is TextBox textBox && !string.IsNullOrEmpty(textBox.Text))
+            {
+                ViewModel?.AddLogEntry(textBox.Text, "UI TEST");
+                // Clear after processing to allow the same message again
+                textBox.Text = string.Empty;
             }
         }
     }

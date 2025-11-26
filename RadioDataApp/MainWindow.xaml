@@ -109,8 +109,17 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Hidden TextBox for UI test logging (Width/Height 0 but still accessible to UI Automation) -->
+        <TextBox x:Name="TestLogInput"
+                 Grid.Row="0"
+                 AutomationProperties.AutomationId="TestLogInput"
+                 Width="0"
+                 Height="0"
+                 IsEnabled="True"
+                 TextChanged="TestLogInput_TextChanged"/>
+
         <!-- Header -->
-        <Border Background="{StaticResource TerminalGray}" Padding="16,8">
+        <Border Grid.Row="0" Background="{StaticResource TerminalGray}" Padding="16,8">
             <DockPanel>
                 <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TerminalGreen}">
                     RadioData - Audio Data Transfer
@@ -133,6 +142,7 @@
                     <GroupBox Header="AUDIO DEVICES" Margin="0,0,0,8">
                         <StackPanel Margin="8">
                             <ComboBox materialDesign:HintAssist.Hint="Input Device" 
+                                      AutomationProperties.AutomationId="InputDeviceCombo"
                                       ItemsSource="{Binding InputDevices}" 
                                       SelectedIndex="{Binding SelectedInputDeviceIndex}"
                                       Foreground="{StaticResource TerminalGreen}"
@@ -142,6 +152,7 @@
                                       ToolTip="Select your microphone or radio input device. Use 'Loopback' for software-only testing."/>
                                       
                             <ComboBox materialDesign:HintAssist.Hint="Output Device" 
+                                      AutomationProperties.AutomationId="OutputDeviceCombo"
                                       ItemsSource="{Binding OutputDevices}" 
                                       SelectedIndex="{Binding SelectedOutputDeviceIndex}"
                                       Foreground="{StaticResource TerminalGreen}"
@@ -220,6 +231,7 @@
                     <GroupBox Header="TRANSMISSION" Margin="0,0,0,8">
                         <StackPanel Margin="8">
                             <TextBox Text="{Binding EncryptionKey, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.AutomationId="EncryptionKeyBox"
                                      MaxLength="64"
                                      materialDesign:HintAssist.Hint="Encryption Key"
                                      materialDesign:HintAssist.Background="#252526"
@@ -233,6 +245,7 @@
                                      ToolTip="Shared password for encryption (1-64 characters). Both sender and receiver must use the same key. XOR cipher provides basic privacy, not military-grade security."/>
                             
                             <TextBox Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.AutomationId="MessageTextBox"
                                      MaxLength="120"
                                      materialDesign:HintAssist.Hint="Enter message..."
                                      materialDesign:HintAssist.Background="#252526"
@@ -259,6 +272,7 @@
                                 </Grid.ColumnDefinitions>
                                 
                                 <Button Grid.Column="0" Command="{Binding StartTransmissionCommand}" 
+                                        AutomationProperties.AutomationId="SendTextButton"
                                         Content="Send Text" 
                                         Style="{DynamicResource MaterialDesignRaisedButton}"
                                         Background="{StaticResource TerminalGreen}"
@@ -268,6 +282,7 @@
                                         ToolTip="Send the message as encrypted audio tones (250 baud). Takes ~2-4 seconds depending on message length."/>
 
                                 <Button Grid.Column="2" Command="{Binding SendFileCommand}" 
+                                        AutomationProperties.AutomationId="SendFileButton"
                                         Content="Send File" 
                                         Style="{DynamicResource MaterialDesignRaisedButton}"
                                         Background="{StaticResource TerminalGreen}"
@@ -328,6 +343,7 @@
                             </Grid.ColumnDefinitions>
                             <Slider Grid.Column="0" 
                                     Value="{Binding SquelchThreshold}" 
+                                    AutomationProperties.AutomationId="SquelchSlider"
                                     Minimum="0.000" 
                                     Maximum="0.100" 
                                     TickFrequency="0.001"
@@ -350,6 +366,7 @@
                             </Grid.ColumnDefinitions>
                             <Slider Grid.Column="0" 
                                     Value="{Binding InputGain}" 
+                                    AutomationProperties.AutomationId="InputGainSlider"
                                     Minimum="0.5" 
                                     Maximum="2.0" 
                                     TickFrequency="0.1"
@@ -372,6 +389,7 @@
                             </Grid.ColumnDefinitions>
                             <Slider Grid.Column="0" 
                                     Value="{Binding ZeroCrossingThreshold}" 
+                                    AutomationProperties.AutomationId="ZeroCrossingSlider"
                                     Minimum="10" 
                                     Maximum="20" 
                                     TickFrequency="1"
@@ -394,6 +412,7 @@
                             </Grid.ColumnDefinitions>
                             <Slider Grid.Column="0" 
                                     Value="{Binding StartBitCompensation}" 
+                                    AutomationProperties.AutomationId="StartBitSlider"
                                     Minimum="-5.0" 
                                     Maximum="5.0" 
                                     TickFrequency="0.5"
@@ -415,6 +434,7 @@
                           ToolTip="Real-time log of all transmissions, receptions, and system events. TX = transmitted, RX = received.">
                     <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto">
                         <TextBox Text="{Binding DebugLog, Mode=OneWay}" 
+                                 AutomationProperties.AutomationId="LogTextBox"
                                  TextWrapping="Wrap" 
                                  FontFamily="Consolas" 
                                  FontSize="11"

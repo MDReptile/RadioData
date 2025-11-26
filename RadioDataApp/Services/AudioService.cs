@@ -1,13 +1,14 @@
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type
-#pragma warning disable CS8601 // Possible null reference assignment
-#pragma warning disable CS8602 // Dereference of a possibly null reference
-#pragma warning disable CS8603 // Possible null reference return
-#pragma warning disable CS8604 // Possible null reference argument
+#pragma warning disable CS8618
+#pragma warning disable CS8600
+#pragma warning disable CS8601
+#pragma warning disable CS8602
+#pragma warning disable CS8603
+#pragma warning disable CS8604
 
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.Windows.Threading;
 
 namespace RadioDataApp.Services
 {
@@ -16,6 +17,10 @@ namespace RadioDataApp.Services
         private WaveInEvent? _waveIn;
         private WaveOutEvent? _waveOut;
         private BufferedWaveProvider? _bufferedWaveProvider;
+        private DispatcherTimer? _loopbackTimer;
+        private byte[]? _loopbackAudioData;
+        private int _loopbackOffset;
+        private const int LOOPBACK_CHUNK_SIZE = 4410;
 
         public event EventHandler<byte[]>? AudioDataReceived;
         public event EventHandler? TransmissionCompleted;
@@ -106,7 +111,6 @@ namespace RadioDataApp.Services
                 Console.WriteLine("[AudioService] ERROR: Device index " + deviceNumber + " out of range (0-" + (outputs.Count - 1) + ")");
             }
 
-            // Always stop previous transmission to ensure clean state
             StopTransmission();
 
             _waveOut = new WaveOutEvent
@@ -129,12 +133,7 @@ namespace RadioDataApp.Services
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Output loopback mode - queuing " + audioData.Length + " bytes to demodulator");
-                var handler = AudioDataReceived;
-                if (handler != null)
-                {
-                    handler(this, audioData);
-                }
+                Console.WriteLine("[AudioService] Output loopback mode - buffering " + audioData.Length + " bytes for simulated playback");
                 return;
             }
 
@@ -146,6 +145,13 @@ namespace RadioDataApp.Services
 
         public TimeSpan GetBufferedDuration()
         {
+            if (IsOutputLoopbackMode && _loopbackAudioData != null)
+            {
+                int remainingBytes = _loopbackAudioData.Length - _loopbackOffset;
+                double remainingSeconds = (double)remainingBytes / 2 / 44100;
+                return TimeSpan.FromSeconds(remainingSeconds);
+            }
+
             if (_bufferedWaveProvider != null)
             {
                 return _bufferedWaveProvider.BufferedDuration;
@@ -155,9 +161,17 @@ namespace RadioDataApp.Services
 
         public void StopTransmission()
         {
+            if (_loopbackTimer != null)
+            {
+                _loopbackTimer.Stop();
+                _loopbackTimer = null;
+            }
+
             if (IsOutputLoopbackMode)
             {
                 Console.WriteLine("[AudioService] Output loopback mode - StopTransmission");
+                _loopbackAudioData = null;
+                _loopbackOffset = 0;
                 var handler = TransmissionCompleted;
                 if (handler != null)
                 {
@@ -185,17 +199,40 @@ namespace RadioDataApp.Services
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Output loopback mode - feeding " + audioData.Length + " bytes to demodulator");
-                var rxHandler = AudioDataReceived;
-                if (rxHandler != null)
+                Console.WriteLine("[AudioService] Output loopback mode - starting simulated transmission of " + audioData.Length + " bytes");
+                _loopbackAudioData = audioData;
+                _loopbackOffset = 0;
+
+                _loopbackTimer = new DispatcherTimer();
+                _loopbackTimer.Interval = TimeSpan.FromMilliseconds(100);
+                _loopbackTimer.Tick += (s, e) =>
                 {
-                    rxHandler(this, audioData);
-                }
-                var txHandler = TransmissionCompleted;
-                if (txHandler != null)
-                {
-                    txHandler(this, EventArgs.Empty);
-                }
+                    if (_loopbackAudioData == null || _loopbackOffset >= _loopbackAudioData.Length)
+                    {
+                        _loopbackTimer.Stop();
+                        _loopbackTimer = null;
+                        Console.WriteLine("[AudioService] Loopback transmission complete");
+                        var txHandler = TransmissionCompleted;
+                        if (txHandler != null)
+                        {
+                            txHandler(this, EventArgs.Empty);
+                        }
+                        return;
+                    }
+
+                    int remaining = _loopbackAudioData.Length - _loopbackOffset;
+                    int chunkSize = Math.Min(LOOPBACK_CHUNK_SIZE, remaining);
+                    byte[] chunk = new byte[chunkSize];
+                    Array.Copy(_loopbackAudioData, _loopbackOffset, chunk, 0, chunkSize);
+                    _loopbackOffset += chunkSize;
+
+                    var rxHandler = AudioDataReceived;
+                    if (rxHandler != null)
+                    {
+                        rxHandler(this, chunk);
+                    }
+                };
+                _loopbackTimer.Start();
                 return;
             }
 

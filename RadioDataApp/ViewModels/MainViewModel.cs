@@ -21,6 +21,8 @@ namespace RadioDataApp.ViewModels
         private readonly ImageCompressionService _imageCompressionService;
         private readonly SettingsService _settingsService;
 
+        public static MainViewModel? Instance { get; private set; }
+
         [ObservableProperty]
         private string _statusMessage = "Ready";
 
@@ -246,6 +248,8 @@ namespace RadioDataApp.ViewModels
 
         public MainViewModel()
         {
+            Instance = this;
+            
             _audioService = new AudioService();
             _modem = new AfskModem();
             _fileTransferService = new FileTransferService();
@@ -661,7 +665,39 @@ namespace RadioDataApp.ViewModels
             if (dialog.ShowDialog() != true)
                 return;
 
-            string filePath = dialog.FileName;
+            SendFileWithPath(dialog.FileName);
+        }
+
+#if DEBUG
+        /// <summary>
+        /// Send a file directly by path, bypassing the file dialog.
+        /// Used for automated testing.
+        /// </summary>
+        public void SendFileWithPath(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                DebugLog += $"[ERROR] File not found: {filePath}\n";
+                return;
+            }
+
+            if (!CanTransmit)
+            {
+                DebugLog += $"[ERROR] Cannot transmit: IsTransmitting={IsTransmitting}, IsReceiving={IsReceiving}\n";
+                return;
+            }
+
+            ProcessFileSending(filePath);
+        }
+#else
+        private void SendFileWithPath(string filePath)
+        {
+            ProcessFileSending(filePath);
+        }
+#endif
+
+        private void ProcessFileSending(string filePath)
+        {
             string fileName = Path.GetFileName(filePath);
             _transferIsCompressed = false;
             _transferTempPath = "";
@@ -677,11 +713,12 @@ namespace RadioDataApp.ViewModels
                     _transferTempPath = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(fileName) + ".cimg");
                     File.WriteAllBytes(_transferTempPath, compressedData);
 
+                    string originalPath = filePath;
                     filePath = _transferTempPath;
                     fileName = Path.GetFileName(_transferTempPath); // .cimg
                     _transferIsCompressed = true;
 
-                    DebugLog += $"[COMPRESSION] Reduced {new FileInfo(dialog.FileName).Length} bytes -> {compressedData.Length} bytes\n";
+                    DebugLog += $"[COMPRESSION] Reduced {new FileInfo(originalPath).Length} bytes -> {compressedData.Length} bytes\n";
                 }
                 catch (Exception ex)
                 {
@@ -794,6 +831,31 @@ namespace RadioDataApp.ViewModels
                 }
             };
             _fileTransferTimer.Start();
+        }
+
+        /// <summary>
+        /// Programmatically add a log entry to the system log.
+        /// Thread-safe for calling from external contexts (e.g., UI automation tests).
+        /// </summary>
+        /// <param name="message">The message to log</param>
+        /// <param name="prefix">Optional prefix (e.g., "TEST", "SYSTEM"). If null, uses "[EXTERNAL]"</param>
+        public void AddLogEntry(string message, string? prefix = null)
+        {
+            string logPrefix = prefix ?? "EXTERNAL";
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            string logEntry = $"[{timestamp}] [{logPrefix}] {message}\n";
+
+            if (Application.Current?.Dispatcher.CheckAccess() == true)
+            {
+                DebugLog += logEntry;
+            }
+            else
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    DebugLog += logEntry;
+                });
+            }
         }
     }
 }
