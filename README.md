@@ -67,7 +67,6 @@ RadioData uses **Audio Frequency Shift Keying (AFSK)** to encode digital data as
 - **.NET 8.0 Runtime** ([Download here](https://dotnet.microsoft.com/download/dotnet/8.0))
 - **Audio Hardware**:
   - Built-in mic/speakers (for testing)
-  - Virtual Audio Cable (recommended for loopback testing)
   - APRS cable or audio interface (for radio connection)
 
 ### Installation
