@@ -189,7 +189,7 @@ namespace RadioDataApp.ViewModels
             long fileSize = fileInfo.Length;
             int packetCount = (int)Math.Ceiling(fileSize / 200.0) + 1;
 
-            double estimatedSeconds = 1.2 + ((packetCount - 1) * 8.3) + 0.8;
+            double estimatedSeconds = 1.2 + ((packetCount - 1) * 2.1) + 0.8;
 
             if (estimatedSeconds > 30)
             {
