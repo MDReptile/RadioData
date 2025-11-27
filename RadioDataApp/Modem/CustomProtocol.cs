@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Security.Cryptography;
 
 namespace RadioDataApp.Modem
 {
@@ -13,6 +14,10 @@ namespace RadioDataApp.Modem
 
         // Configurable encryption key (default: "RADIO")
         public static string EncryptionKey { get; set; } = "RADIO";
+
+        // Cache for derived key to avoid re-hashing on every packet
+        private static string _cachedKeyString = "";
+        private static byte[] _cachedDerivedKey = Array.Empty<byte>();
 
         public enum PacketType : byte
         {
@@ -31,9 +36,32 @@ namespace RadioDataApp.Modem
         // Signal for when checksum validation actually failed
         public static event EventHandler? ChecksumValidationFailed;
 
+        private static byte[] DeriveKeyFromPassword(string password)
+        {
+            // Check cache first
+            if (password == _cachedKeyString && _cachedDerivedKey.Length > 0)
+            {
+                return _cachedDerivedKey;
+            }
+
+            // Use SHA256 to derive a 256-bit key from the password
+            // This makes even 1-character differences produce completely different keys
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
+                byte[] hash = sha256.ComputeHash(passwordBytes);
+                
+                // Cache the result
+                _cachedKeyString = password;
+                _cachedDerivedKey = hash;
+                
+                return hash;
+            }
+        }
+
         private static byte[] ApplyEncryption(byte[] data)
         {
-            byte[] keyBytes = Encoding.ASCII.GetBytes(EncryptionKey);
+            byte[] keyBytes = DeriveKeyFromPassword(EncryptionKey);
             byte[] encrypted = new byte[data.Length];
 
             for (int i = 0; i < data.Length; i++)
