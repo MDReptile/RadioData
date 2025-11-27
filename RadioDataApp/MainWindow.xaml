@@ -222,22 +222,37 @@
                             Margin="8,0,0,0"
                             ToolTip="Clear all chat history and system logs"/>
                     
-                    <TextBox DockPanel.Dock="Right"
-                             HorizontalAlignment="Right"
-                             VerticalAlignment="Center"
-                             Width="200"
-                             Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"
-                             MaxLength="10"
-                             materialDesign:HintAssist.Hint="Your Name"
-                             materialDesign:HintAssist.Background="{StaticResource TerminalGray}"
-                             Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                             Foreground="{StaticResource TerminalGreen}"
-                             CaretBrush="{StaticResource TerminalGreen}"
-                             materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
-                             materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
-                             BorderBrush="{StaticResource TerminalGreen}"
-                             FontSize="12"
-                             ToolTip="Your identifier shown in chat messages. Auto-generated on first launch, but you can change it anytime."/>
+                    <Grid DockPanel.Dock="Right"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Width="250">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBox Grid.Column="0"
+                                 x:Name="ClientNameBox"
+                                 Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="10"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                 Foreground="{StaticResource TerminalGreen}"
+                                 CaretBrush="{StaticResource TerminalGreen}"
+                                 materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                 BorderBrush="{StaticResource TerminalGreen}"
+                                 FontSize="12"
+                                 Padding="8,6"
+                                 Margin="0,0,8,0"
+                                 KeyDown="ClientNameBox_KeyDown"
+                                 ToolTip="Your identifier shown in chat messages. Auto-generated on first launch, but you can change it anytime."/>
+                        
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TerminalGreen}"
+                                   Opacity="0.7"
+                                   Text="{Binding ClientName.Length, StringFormat={}{0} / 10, FallbackValue=0 / 10}"/>
+                    </Grid>
                 </DockPanel>
             </Border>
 
@@ -260,7 +275,6 @@
                                           ItemsSource="{Binding InputDevices}" 
                                           SelectedIndex="{Binding SelectedInputDeviceIndex}"
                                           Foreground="{StaticResource TerminalGreen}"
-                                          materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
                                           materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
                                           Margin="0,0,0,8"
                                           ToolTip="Select your microphone or radio input device. Use 'Loopback' for software-only testing."/>
@@ -270,7 +284,6 @@
                                           ItemsSource="{Binding OutputDevices}" 
                                           SelectedIndex="{Binding SelectedOutputDeviceIndex}"
                                           Foreground="{StaticResource TerminalGreen}"
-                                          materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
                                           materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
                                           ToolTip="Select your speakers or radio output device. Use 'Loopback' for software-only testing."/>
                             </StackPanel>
@@ -344,33 +357,39 @@
                         <!-- Transmission Controls -->
                         <GroupBox Header="TRANSMISSION" Margin="0,0,0,8">
                             <StackPanel Margin="8">
-                                <TextBox Text="{Binding EncryptionKey, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBlock Text="Encryption Key" 
+                                           FontSize="10" 
+                                           Foreground="White"
+                                           Margin="0,0,0,2"/>
+                                <TextBox x:Name="EncryptionKeyBox"
+                                         Text="{Binding EncryptionKey, UpdateSourceTrigger=PropertyChanged}"
                                          AutomationProperties.AutomationId="EncryptionKeyBox"
                                          MaxLength="64"
-                                         materialDesign:HintAssist.Hint="Encryption Key"
-                                         materialDesign:HintAssist.Background="#252526"
                                          Style="{DynamicResource MaterialDesignOutlinedTextBox}"
                                          Foreground="{StaticResource TerminalGreen}"
                                          CaretBrush="{StaticResource TerminalGreen}"
-                                         materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
                                          materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
                                          BorderBrush="{StaticResource TerminalGreen}"
                                          Margin="0,0,0,16"
+                                         KeyDown="EncryptionKeyBox_KeyDown"
                                          ToolTip="Shared password for encryption (1-64 characters). Both sender and receiver must use the same key. XOR cipher provides basic privacy, not military-grade security."/>
                             
-                                <TextBox Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBlock Text="Enter message..." 
+                                           FontSize="10" 
+                                           Foreground="White"
+                                           Margin="0,0,0,2"/>
+                                <TextBox x:Name="MessageTextBox"
+                                         Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}"
                                          AutomationProperties.AutomationId="MessageTextBox"
                                          MaxLength="120"
-                                         materialDesign:HintAssist.Hint="Enter message..."
-                                         materialDesign:HintAssist.Background="#252526"
                                          Style="{DynamicResource MaterialDesignOutlinedTextBox}"
                                          Foreground="{StaticResource TerminalGreen}"
                                          CaretBrush="{StaticResource TerminalGreen}"
-                                         materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
                                          materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
                                          BorderBrush="{StaticResource TerminalGreen}"
                                          Margin="0,0,0,8"
-                                         ToolTip="Type your message here (max 120 characters). Will be encrypted and sent as audio tones."/>
+                                         KeyDown="MessageTextBox_KeyDown"
+                                         ToolTip="Type your message here (max 120 characters). Will be encrypted and sent as audio tones. Press Enter to send."/>
 
                                 <CheckBox Content="Enable Image Compression [12-bit]" 
                                           IsChecked="{Binding CompressImages}"

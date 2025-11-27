@@ -95,5 +95,38 @@ namespace RadioDataApp
         {
             Close();
         }
+
+        private void EncryptionKeyBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                // Remove focus from the textbox
+                Keyboard.ClearFocus();
+                e.Handled = true;
+            }
+        }
+
+        private void MessageTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                // Send the message
+                if (ViewModel != null && ViewModel.StartTransmissionCommand.CanExecute(null))
+                {
+                    ViewModel.StartTransmissionCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void ClientNameBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                // Remove focus from the textbox
+                Keyboard.ClearFocus();
+                e.Handled = true;
+            }
+        }
     }
 }
