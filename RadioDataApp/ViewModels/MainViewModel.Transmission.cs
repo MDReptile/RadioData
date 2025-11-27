@@ -18,11 +18,16 @@ namespace RadioDataApp.ViewModels
         private bool _transferIsCompressed;
         private DateTime _transferStartTime;
 
-        private bool CanTransmit => !IsTransmitting && !IsReceiving && !string.IsNullOrWhiteSpace(MessageToSend);
+        private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void StartTransmission()
         {
+            if (string.IsNullOrWhiteSpace(MessageToSend))
+            {
+                return;
+            }
+
             IsTransmitting = true;
             StatusMessage = "Transmitting...";
 
@@ -59,7 +64,6 @@ namespace RadioDataApp.ViewModels
                     _transmissionMonitorTimer.Stop();
                     IsTransmitting = false;
                     StatusMessage = "Ready";
-                    MessageToSend = "Hello World";
                 }
             };
             _transmissionMonitorTimer.Start();
