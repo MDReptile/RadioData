@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:RadioDataApp"
         xmlns:vm="clr-namespace:RadioDataApp.ViewModels"
         mc:Ignorable="d"
-        Title="RadioData" Height="768" Width="1280" MinHeight="600" MinWidth="1024"
+        Title="RadioData" Height="845" Width="1280" MinHeight="600" MinWidth="1024"
         TextElement.Foreground="#4CAF50"
         TextElement.FontWeight="Regular"
         TextElement.FontSize="13"

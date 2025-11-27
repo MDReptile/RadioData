@@ -37,6 +37,7 @@ namespace RadioDataApp.Services
         public event EventHandler<string>? DebugMessage;
         public event EventHandler<string>? TimeoutOccurred;
         public event EventHandler<FileOverwriteEventArgs>? FileOverwritePrompt;
+        public event EventHandler<DangerousFileEventArgs>? DangerousFileWarning;
 
         // Public state for debugging
         public int ReceivedChunks => _receivedChunkIds.Count;
@@ -48,6 +49,29 @@ namespace RadioDataApp.Services
         {
             public string FilePath { get; set; } = "";
             public bool Overwrite { get; set; }
+        }
+
+        public class DangerousFileEventArgs : EventArgs
+        {
+            public string FileName { get; set; } = "";
+            public string FileExtension { get; set; } = "";
+            public bool AllowSave { get; set; }
+        }
+
+        // List of potentially dangerous file extensions
+        private static readonly HashSet<string> DangerousExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".exe", ".com", ".bat", ".cmd", ".vbs", ".vbe", ".js", ".jse",
+            ".wsf", ".wsh", ".msi", ".msp", ".scr", ".hta", ".cpl", ".msc",
+            ".jar", ".ps1", ".ps1xml", ".ps2", ".ps2xml", ".psc1", ".psc2",
+            ".reg", ".dll", ".sys", ".drv", ".ocx", ".app", ".deb", ".rpm",
+            ".sh", ".bash", ".py", ".rb", ".pl", ".php", ".asp", ".aspx"
+        };
+
+        private static bool IsDangerousFileType(string fileName)
+        {
+            string extension = Path.GetExtension(fileName).ToLower();
+            return DangerousExtensions.Contains(extension);
         }
 
         public FileTransferService()
@@ -215,6 +239,30 @@ namespace RadioDataApp.Services
             Console.WriteLine($"[FileTransfer] FinishReception called. Chunks received: {_receivedChunkIds.Count}/{_expectedChunks}");
             _isReceivingFile = false;
             _timeoutTimer.Stop(); // Stop timeout timer on successful completion
+
+            // Check for dangerous file types before writing to disk
+            if (IsDangerousFileType(_currentFileName))
+            {
+                Console.WriteLine($"[FileTransfer] Detected potentially dangerous file type: {_currentFileName}");
+                var dangerArgs = new DangerousFileEventArgs 
+                { 
+                    FileName = _currentFileName,
+                    FileExtension = Path.GetExtension(_currentFileName),
+                    AllowSave = false 
+                };
+                
+                DangerousFileWarning?.Invoke(this, dangerArgs);
+                
+                if (!dangerArgs.AllowSave)
+                {
+                    Console.WriteLine($"[FileTransfer] User declined to save dangerous file: {_currentFileName}");
+                    DebugMessage?.Invoke(this, $"[SECURITY] File transfer cancelled: {_currentFileName} (potentially dangerous file type)");
+                    return;
+                }
+                
+                Console.WriteLine($"[FileTransfer] User approved saving dangerous file: {_currentFileName}");
+                DebugMessage?.Invoke(this, $"[SECURITY] User approved saving: {_currentFileName}");
+            }
 
             string receiveDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReceivedFiles");
             Console.WriteLine($"[FileTransfer] Target directory: {receiveDir}");

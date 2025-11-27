@@ -318,6 +318,7 @@ namespace RadioDataApp.ViewModels
             _fileTransferService.FileReceived += OnFileReceived;
             _fileTransferService.TimeoutOccurred += OnFileTransferTimeout;
             _fileTransferService.FileOverwritePrompt += OnFileOverwritePrompt;
+            _fileTransferService.DangerousFileWarning += OnDangerousFileWarning;
 
             // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += OnRmsLevelDetected;
@@ -422,11 +423,13 @@ namespace RadioDataApp.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                StatusMessage = "File received: " + Path.GetFileName(path);
+                string fileName = Path.GetFileName(path);
+                StatusMessage = $"File received: {fileName}";
                 TransferStatus = "Receive Complete";
                 IsReceiving = false;
                 IsTransferring = false;
-                DebugLog += "[FILE] Saved to: " + path + "\n";
+                DebugLog += $"<< File received: {fileName}\n";
+                DebugLog += $"[FILE] Saved to: {path}\n";
             });
         }
 
@@ -460,6 +463,39 @@ namespace RadioDataApp.ViewModels
                 else
                 {
                     DebugLog += $"[FILE] Creating new numbered file for: {fileName}\n";
+                }
+            });
+        }
+
+        private void OnDangerousFileWarning(object? sender, FileTransferService.DangerousFileEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                DebugLog += $"[SECURITY WARNING] Potentially dangerous file type detected: {e.FileName}\n";
+                
+                var result = MessageBox.Show(
+                    $"⚠ SECURITY WARNING ⚠\n\n" +
+                    $"The file '{e.FileName}' has a potentially dangerous file type ({e.FileExtension}).\n\n" +
+                    $"This file type can execute code and may harm your computer if it contains malware.\n\n" +
+                    $"Only save this file if:\n" +
+                    $"• You trust the sender\n" +
+                    $"• You know what this file is\n" +
+                    $"• You plan to scan it with antivirus before opening\n\n" +
+                    $"Do you want to save this file anyway?",
+                    "Security Warning - Potentially Dangerous File",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No);
+
+                e.AllowSave = (result == MessageBoxResult.Yes);
+
+                if (e.AllowSave)
+                {
+                    DebugLog += $"[SECURITY] User approved saving dangerous file: {e.FileName}\n";
+                }
+                else
+                {
+                    DebugLog += $"[SECURITY] User declined to save dangerous file: {e.FileName}\n";
                 }
             });
         }
@@ -564,11 +600,13 @@ namespace RadioDataApp.ViewModels
                     {
                         case CustomProtocol.PacketType.Text:
                             string receivedMessage = System.Text.Encoding.ASCII.GetString(packet.Payload);
-                            DebugLog += "RX: " + receivedMessage + "\n";
-                            ChatLog += $"[Remote] {receivedMessage}\n";
+                            string senderName = packet.SenderName ?? "Remote";
+                            DebugLog += $"RX: {receivedMessage}\n";
+                            ChatLog += $"<< [{senderName}] {receivedMessage}\n";
                             break;
                         case CustomProtocol.PacketType.FileHeader:
                             DebugLog += "\n=== RECEIVING FILE ===\n";
+                            DebugLog += "<< Incoming file transfer\n";
                             IsTransferring = true;
                             _fileTransferService.HandlePacket(packet);
                             break;
@@ -628,9 +666,9 @@ namespace RadioDataApp.ViewModels
             StatusMessage = "Transmitting...";
 
             DebugLog += $"TX: {MessageToSend}\n";
-            ChatLog += $"[{ClientName}] {MessageToSend}\n";
+            ChatLog += $">> [{ClientName}] {MessageToSend}\n";
 
-            byte[] packet = CustomProtocol.Encode(MessageToSend);
+            byte[] packet = CustomProtocol.Encode(MessageToSend, ClientName);
             byte[] audioSamples = _modem.Modulate(packet);
 
             // Start visualization
@@ -831,7 +869,7 @@ namespace RadioDataApp.ViewModels
             StatusMessage = $"Sending: {fileName}";
 
             DebugLog += "\n=== SENDING FILE ===\n";
-            DebugLog += $"File: {fileName}\n";
+            DebugLog += $">> File: {fileName}\n";
             DebugLog += $"Size: {fileSize / 1024.0:F1} KB\n";
             DebugLog += $"Packets: {packetCount}\n";
             DebugLog += $"Est. time: {estimatedSeconds:F0}s\n";
@@ -900,7 +938,7 @@ namespace RadioDataApp.ViewModels
                 IsTransferring = false;
                 OutputFrequency = 1000;
                 OutputVolume = 0;
-                DebugLog += "=== SEND COMPLETE ===\n";
+                DebugLog += ">> File send complete\n";
                 DebugLog += "====================\n\n";
 
                 // Cleanup

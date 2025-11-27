@@ -25,6 +25,7 @@ namespace RadioDataApp.Modem
         {
             public PacketType Type { get; set; }
             public byte[] Payload { get; set; } = [];
+            public string? SenderName { get; set; }
         }
 
         // Signal for when checksum validation actually failed
@@ -78,9 +79,26 @@ namespace RadioDataApp.Modem
             return packet.ToArray();
         }
 
-        public static byte[] Encode(string text)
+        public static byte[] Encode(string text, string? senderName = null)
         {
-            return Encode(Encoding.ASCII.GetBytes(text), PacketType.Text);
+            // Format for text messages with sender name:
+            // [SenderNameLength(1 byte)][SenderName(variable)][Message(rest)]
+            List<byte> payload = [];
+            
+            if (!string.IsNullOrEmpty(senderName))
+            {
+                byte[] nameBytes = Encoding.ASCII.GetBytes(senderName);
+                payload.Add((byte)nameBytes.Length);
+                payload.AddRange(nameBytes);
+            }
+            else
+            {
+                payload.Add(0); // No sender name
+            }
+            
+            payload.AddRange(Encoding.ASCII.GetBytes(text));
+            
+            return Encode(payload.ToArray(), PacketType.Text);
         }
 
         public static DecodedPacket? DecodeAndConsume(List<byte> buffer)
@@ -157,10 +175,32 @@ namespace RadioDataApp.Modem
 
             byte[] payload = RemoveEncryption(encryptedPayload);
 
+            // Extract sender name for text messages
+            string? senderName = null;
+            if (type == PacketType.Text && payload.Length > 0)
+            {
+                int nameLength = payload[0];
+                if (nameLength > 0 && payload.Length > nameLength)
+                {
+                    senderName = Encoding.ASCII.GetString(payload, 1, nameLength);
+                    // Remove sender name from payload, leaving only the message
+                    byte[] messageOnly = new byte[payload.Length - nameLength - 1];
+                    Array.Copy(payload, nameLength + 1, messageOnly, 0, messageOnly.Length);
+                    payload = messageOnly;
+                }
+                else if (nameLength == 0 && payload.Length > 1)
+                {
+                    // No sender name, remove the length byte
+                    byte[] messageOnly = new byte[payload.Length - 1];
+                    Array.Copy(payload, 1, messageOnly, 0, messageOnly.Length);
+                    payload = messageOnly;
+                }
+            }
+
             // Consume packet
             buffer.RemoveRange(0, totalPacketSize);
 
-            return new DecodedPacket { Type = type, Payload = payload };
+            return new DecodedPacket { Type = type, Payload = payload, SenderName = senderName };
         }
     }
 }
