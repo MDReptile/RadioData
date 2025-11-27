@@ -190,13 +190,29 @@ namespace RadioDataApp.ViewModels
 
             var fileInfo = new FileInfo(filePath);
             long fileSize = fileInfo.Length;
-            int packetCount = (int)Math.Ceiling(fileSize / 200.0);
+            int packetCount = (int)Math.Ceiling(fileSize / 200.0) + 1;
 
             double firstPacketTime = 13.5;
             double otherPacketTime = 9.5;
             double estimatedSeconds = firstPacketTime + (packetCount - 1) * otherPacketTime;
 
-            if (fileSize > 1024 && !_transferIsCompressed)
+            if (estimatedSeconds > 30)
+            {
+                string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
+                var result = System.Windows.MessageBox.Show(
+                    $"?? WARNING: Long Transfer Time\n\n" +
+                    $"File size: {fileSize / 1024.0:F1} KB\n" +
+                    $"Estimated time: {timeStr}\n\n" +
+                    $"This application is designed for small files (< 30 seconds).\n" +
+                    $"Longer transfers may fail due to radio/VOX limitations.\n\n" +
+                    $"Continue anyway?",
+                    "File Transfer Warning",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+                if (result != System.Windows.MessageBoxResult.Yes)
+                    return;
+            }
+            else if (fileSize > 1024 && !_transferIsCompressed)
             {
                 string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
                 var result = System.Windows.MessageBox.Show(
@@ -210,7 +226,7 @@ namespace RadioDataApp.ViewModels
 
             IsTransmitting = true;
             IsTransferring = true;
-            StatusMessage = $"Sending: {fileName}";
+            StatusMessage = $"Generating audio for {fileName}...";
 
             DebugLog += "\n=== SENDING FILE ===\n";
             DebugLog += $">> File: {fileName}\n";
@@ -219,84 +235,99 @@ namespace RadioDataApp.ViewModels
             DebugLog += $"Est. time: {estimatedSeconds:F0}s\n";
             DebugLog += "====================\n";
 
-            _transferPackets = _fileTransferService.PrepareFileForTransmission(filePath);
-            _transferIndex = 0;
             _transferStartTime = DateTime.Now;
-            _lastChunkSentTime = DateTime.Now;
 
-            int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
-            _audioService.InitializeTransmission(deviceIndex);
-
-            _fileTransferTimer?.Stop();
-            _fileTransferTimer = new DispatcherTimer();
-            _fileTransferTimer.Interval = TimeSpan.FromMilliseconds(50);
-            _fileTransferTimer.Tick += (s, e) =>
+            System.Threading.Tasks.Task.Run(() =>
             {
-                if (_audioService.GetBufferedDuration().TotalSeconds > 10)
+                try
                 {
-                    return;
-                }
-
-                if (_transferPackets != null && _transferIndex < _transferPackets.Count)
-                {
-                    DateTime now = DateTime.Now;
-                    var packet = _transferPackets[_transferIndex];
-                    bool preamble = true;
-                    int preambleDuration = _transferIndex == 0 ? 1200 : 300;
-
-                    var audio = _modem.Modulate(packet, preamble, preambleDuration);
-                    _audioService.QueueAudio(audio);
-                    UpdateOutputMetrics(audio);
-
-                    _transferIndex++;
-                    double prog = (double)_transferIndex / _transferPackets.Count * 100;
-                    TransferProgress = prog;
-                    TransferStatus = $"Sending {fileName}: Packet {_transferIndex}/{_transferPackets.Count}";
-
-                    if (_transferIndex == 1)
+                    var packets = _fileTransferService.PrepareFileForTransmission(filePath);
+                    
+                    List<byte> completeAudio = new List<byte>();
+                    
+                    for (int i = 0; i < packets.Count; i++)
                     {
-                        DebugLog += $"[TX TIMING] Header sent at {now:HH:mm:ss.fff}\n";
+                        bool isFirst = i == 0;
+                        int preambleDuration = isFirst ? 1200 : 20;
+                        
+                        var packetAudio = _modem.Modulate(packets[i], true, preambleDuration);
+                        completeAudio.AddRange(packetAudio);
                     }
-                    else
+
+                    byte[] finalAudio = completeAudio.ToArray();
+                    
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        double timeSinceLastChunk = (now - _lastChunkSentTime).TotalSeconds;
-                        double totalElapsed = (now - _transferStartTime).TotalSeconds;
-                        DebugLog += $"[TX TIMING] Chunk {_transferIndex}/{_transferPackets.Count} | Gap: {timeSinceLastChunk:F2}s | Total: {totalElapsed:F2}s | Time: {now:HH:mm:ss.fff}\n";
-                    }
-                    _lastChunkSentTime = now;
-
-                    return;
+                        StatusMessage = $"Sending: {fileName}";
+                        DebugLog += $"[TX] Generated continuous audio: {finalAudio.Length / 88200.0:F1}s\n";
+                        
+                        int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+                        _audioService.StartTransmitting(deviceIndex, finalAudio);
+                        
+                        StartVisualization(finalAudio);
+                        
+                        _transmissionMonitorTimer?.Stop();
+                        _transmissionMonitorTimer = new DispatcherTimer();
+                        _transmissionMonitorTimer.Interval = TimeSpan.FromMilliseconds(100);
+                        
+                        bool hasStartedPlaying = false;
+                        int packetIndex = 0;
+                        
+                        _transmissionMonitorTimer.Tick += (s, e) =>
+                        {
+                            var duration = _audioService.GetBufferedDuration().TotalSeconds;
+                            
+                            if (duration > 0)
+                            {
+                                hasStartedPlaying = true;
+                            }
+                            
+                            double totalDuration = finalAudio.Length / 88200.0;
+                            double elapsed = totalDuration - duration;
+                            double progress = (elapsed / totalDuration) * 100;
+                            
+                            TransferProgress = Math.Min(100, progress);
+                            TransferStatus = $"Sending {fileName}: {progress:F0}%";
+                            
+                            if (hasStartedPlaying && duration < 0.1)
+                            {
+                                _transmissionMonitorTimer.Stop();
+                                
+                                double totalTransferTime = (DateTime.Now - _transferStartTime).TotalSeconds;
+                                string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
+                                ChatLog += $">> [{ClientName}] SENT FILE: {fileName} : Sent {timestamp}\n";
+                                
+                                StatusMessage = $"File sent: {fileName}";
+                                TransferStatus = $"Completed: {fileName} ({packets.Count} packets)";
+                                TransferProgress = 100;
+                                IsTransmitting = false;
+                                IsTransferring = false;
+                                OutputFrequency = 1000;
+                                OutputVolume = 0;
+                                DebugLog += $"[TX TIMING] Transfer complete in {totalTransferTime:F2}s\n";
+                                DebugLog += ">> File send complete\n";
+                                DebugLog += "====================\n\n";
+                                
+                                if (_transferIsCompressed && !string.IsNullOrEmpty(_transferTempPath) && File.Exists(_transferTempPath))
+                                {
+                                    try { File.Delete(_transferTempPath); } catch { }
+                                }
+                            }
+                        };
+                        _transmissionMonitorTimer.Start();
+                    });
                 }
-
-                if (_audioService.GetBufferedDuration().TotalSeconds > 0.1)
+                catch (Exception ex)
                 {
-                    return;
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        DebugLog += $"[ERROR] Audio generation failed: {ex.Message}\n";
+                        StatusMessage = "Transfer failed";
+                        IsTransmitting = false;
+                        IsTransferring = false;
+                    });
                 }
-
-                _fileTransferTimer.Stop();
-                _audioService.StopTransmission();
-
-                double totalTransferTime = (DateTime.Now - _transferStartTime).TotalSeconds;
-                string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
-                ChatLog += $">> [{ClientName}] SENT FILE: {fileName} : Sent {timestamp}\n";
-
-                StatusMessage = $"File sent: {fileName}";
-                TransferStatus = $"Completed: {fileName} ({_transferPackets?.Count ?? 0} packets)";
-                TransferProgress = 100;
-                IsTransmitting = false;
-                IsTransferring = false;
-                OutputFrequency = 1000;
-                OutputVolume = 0;
-                DebugLog += $"[TX TIMING] Transfer complete in {totalTransferTime:F2}s\n";
-                DebugLog += ">> File send complete\n";
-                DebugLog += "====================\n\n";
-
-                if (_transferIsCompressed && !string.IsNullOrEmpty(_transferTempPath) && File.Exists(_transferTempPath))
-                {
-                    try { File.Delete(_transferTempPath); } catch { }
-                }
-            };
-            _fileTransferTimer.Start();
+            });
         }
     }
 }
