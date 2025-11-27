@@ -113,6 +113,29 @@ namespace RadioDataApp.ViewModels
         private string _debugLog = "RADIO_DATA_TERMINAL_INITIALIZED...\n";
 
         [ObservableProperty]
+        private string _chatLog = "";
+
+        [ObservableProperty]
+        private string _clientName = "";
+
+        partial void OnClientNameChanged(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                ClientName = GenerateUniqueClientName();
+                return;
+            }
+
+            if (value.Length > 10)
+            {
+                ClientName = value.Substring(0, 10);
+                return;
+            }
+
+            SaveCurrentSettings();
+        }
+
+        [ObservableProperty]
         private double _transferProgress;
 
         [ObservableProperty]
@@ -265,12 +288,23 @@ namespace RadioDataApp.ViewModels
             _squelchThreshold = settings.SquelchThreshold;
             _compressImages = settings.CompressImages;
 
+            if (string.IsNullOrWhiteSpace(settings.ClientName))
+            {
+                _clientName = GenerateUniqueClientName();
+                SaveCurrentSettings();
+            }
+            else
+            {
+                _clientName = settings.ClientName;
+            }
+
             CustomProtocol.EncryptionKey = _encryptionKey;
             _modem.InputGain = (float)_inputGain;
             _modem.ZeroCrossingThreshold = _zeroCrossingThreshold;
             _modem.StartBitCompensation = _startBitCompensation;
             _modem.SquelchThreshold = (float)_squelchThreshold;
 
+            Console.WriteLine($"[Settings] Loaded client name: {_clientName}");
             Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
             Console.WriteLine($"[Settings] Loaded input gain: {_inputGain}x");
             Console.WriteLine($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
@@ -316,6 +350,22 @@ namespace RadioDataApp.ViewModels
             Console.WriteLine($"[Settings] Loaded output device index: {_selectedOutputDeviceIndex}");
         }
 
+        private string GenerateUniqueClientName()
+        {
+            long ticks = DateTime.UtcNow.Ticks;
+            Random random = new Random((int)(ticks & 0xFFFFFFFF));
+            
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            char[] name = new char[10];
+            
+            for (int i = 0; i < 10; i++)
+            {
+                name[i] = chars[random.Next(chars.Length)];
+            }
+            
+            return new string(name);
+        }
+
         private void LoadDevices()
         {
             InputDevices.Clear();
@@ -343,6 +393,7 @@ namespace RadioDataApp.ViewModels
             var settings = new SettingsService.AppSettings
             {
                 EncryptionKey = EncryptionKey,
+                ClientName = ClientName,
                 SelectedInputDeviceIndex = SelectedInputDeviceIndex,
                 SelectedOutputDeviceIndex = SelectedOutputDeviceIndex,
                 InputGain = InputGain,
@@ -512,11 +563,13 @@ namespace RadioDataApp.ViewModels
                     switch (packet.Type)
                     {
                         case CustomProtocol.PacketType.Text:
-                            DebugLog += "RX: " + System.Text.Encoding.ASCII.GetString(packet.Payload) + "\n";
+                            string receivedMessage = System.Text.Encoding.ASCII.GetString(packet.Payload);
+                            DebugLog += "RX: " + receivedMessage + "\n";
+                            ChatLog += $"[Remote] {receivedMessage}\n";
                             break;
                         case CustomProtocol.PacketType.FileHeader:
                             DebugLog += "\n=== RECEIVING FILE ===\n";
-                            IsTransferring = true; // Mark as file transfer in progress
+                            IsTransferring = true;
                             _fileTransferService.HandlePacket(packet);
                             break;
                         case CustomProtocol.PacketType.FileChunk:
@@ -574,7 +627,8 @@ namespace RadioDataApp.ViewModels
             IsTransmitting = true;
             StatusMessage = "Transmitting...";
 
-            DebugLog += $"TX: {MessageToSend}\n"; // Log sent message
+            DebugLog += $"TX: {MessageToSend}\n";
+            ChatLog += $"[{ClientName}] {MessageToSend}\n";
 
             byte[] packet = CustomProtocol.Encode(MessageToSend);
             byte[] audioSamples = _modem.Modulate(packet);
@@ -586,7 +640,7 @@ namespace RadioDataApp.ViewModels
             int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
             _audioService.StartTransmitting(deviceIndex, audioSamples);
 
-            MessageToSend = string.Empty; // Clear input
+            MessageToSend = string.Empty;
 
             // Monitor buffer to reset IsTransmitting when done
             _transmissionMonitorTimer?.Stop();

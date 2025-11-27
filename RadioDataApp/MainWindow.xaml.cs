@@ -61,6 +61,13 @@ namespace RadioDataApp
                     LogScrollViewer?.ScrollToBottom();
                 }, System.Windows.Threading.DispatcherPriority.Background);
             }
+            else if (e.PropertyName == nameof(MainViewModel.ChatLog))
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    ChatScrollViewer?.ScrollToBottom();
+                }, System.Windows.Threading.DispatcherPriority.Background);
+            }
         }
 
         private void TestLogInput_TextChanged(object sender, TextChangedEventArgs e)

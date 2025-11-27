@@ -121,9 +121,26 @@
         <!-- Header -->
         <Border Grid.Row="0" Background="{StaticResource TerminalGray}" Padding="16,8">
             <DockPanel>
-                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TerminalGreen}">
+                <TextBlock DockPanel.Dock="Left" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TerminalGreen}">
                     RadioData - Audio Data Transfer
                 </TextBlock>
+                
+                <TextBox DockPanel.Dock="Right"
+                         HorizontalAlignment="Right"
+                         VerticalAlignment="Center"
+                         Width="200"
+                         Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"
+                         MaxLength="10"
+                         materialDesign:HintAssist.Hint="Your Name"
+                         materialDesign:HintAssist.Background="{StaticResource TerminalGray}"
+                         Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                         Foreground="{StaticResource TerminalGreen}"
+                         CaretBrush="{StaticResource TerminalGreen}"
+                         materialDesign:HintAssist.Foreground="{StaticResource TerminalGreen}"
+                         materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                         BorderBrush="{StaticResource TerminalGreen}"
+                         FontSize="12"
+                         ToolTip="Your identifier shown in chat messages. Auto-generated on first launch, but you can change it anytime."/>
             </DockPanel>
         </Border>
 
@@ -323,10 +340,12 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- RIGHT COLUMN: Advanced Tuning + System Log -->
+            <!-- RIGHT COLUMN: Advanced Tuning + System Log + Chat -->
             <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="*"/>
                     <RowDefinition Height="8"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
@@ -429,12 +448,30 @@
                     </StackPanel>
                 </GroupBox>
 
-                <!-- System Log (Bottom - takes remaining space) -->
+                <!-- System Log (Middle) -->
                 <GroupBox Grid.Row="2" Header="SYSTEM LOG"
                           ToolTip="Real-time log of all transmissions, receptions, and system events. TX = transmitted, RX = received.">
                     <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto">
                         <TextBox Text="{Binding DebugLog, Mode=OneWay}" 
                                  AutomationProperties.AutomationId="LogTextBox"
+                                 TextWrapping="Wrap" 
+                                 FontFamily="Consolas" 
+                                 FontSize="11"
+                                 IsReadOnly="True"
+                                 Background="{StaticResource TerminalGray}"
+                                 Foreground="{StaticResource TerminalGreen}"
+                                 BorderThickness="0"
+                                 VerticalScrollBarVisibility="Disabled"
+                                 HorizontalScrollBarVisibility="Disabled"/>
+                    </ScrollViewer>
+                </GroupBox>
+
+                <!-- Chat (Bottom) -->
+                <GroupBox Grid.Row="4" Header="CHAT"
+                          ToolTip="Conversation view of sent and received text messages. Shows your name and remote messages.">
+                    <ScrollViewer x:Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto">
+                        <TextBox Text="{Binding ChatLog, Mode=OneWay}" 
+                                 AutomationProperties.AutomationId="ChatTextBox"
                                  TextWrapping="Wrap" 
                                  FontFamily="Consolas" 
                                  FontSize="11"

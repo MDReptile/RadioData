@@ -12,6 +12,7 @@ namespace RadioDataApp.Services
         public class AppSettings
         {
             public string EncryptionKey { get; set; } = "RADIO";
+            public string ClientName { get; set; } = "";
             public int SelectedInputDeviceIndex { get; set; } = 1;
             public int SelectedOutputDeviceIndex { get; set; } = 1;
             public double InputGain { get; set; } = 1.0;
