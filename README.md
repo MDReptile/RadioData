@@ -26,7 +26,7 @@
 - **Client Names**: 10-character identifiers auto-generated on first launch, shown in chat messages
 - **File Transfer**: Split large files into 200-byte packets and reassemble on reception
 - **Image Compression**: Optional 12-bit color compression (~50% size reduction) for faster image transfers
-- **XOR Encryption**: Basic encryption using configurable shared keys (1-64 characters)
+- **SHA256-Based Encryption**: Secure encryption using configurable shared keys (1-64 characters) with SHA256 key derivation
 - **Real-time Audio Meters**: Monitor input/output frequency and volume levels
 - **Loopback Testing**: Software-only mode for testing without physical audio hardware
 - **Advanced Tuning**: Adjustable parameters to optimize for different audio hardware and radio configurations
@@ -62,7 +62,12 @@ RadioData uses **Audio Frequency Shift Keying (AFSK)** to encode digital data as
 - `0x02` - File header (filename + size)
 - `0x03` - File chunk (sequence ID + data)
 
-**Encryption**: XOR cipher with user key (default: "RADIO")  
+**Encryption**: XOR cipher with SHA256-derived key (default password: "RADIO")
+- Password is hashed using SHA256 to create a 256-bit encryption key
+- Even a single character difference in the password produces a completely different key
+- Provides avalanche effect - changing one character makes entire message unreadable
+- Key is cached for performance to avoid re-hashing on every packet
+
 **Checksum**: Simple sum validation
 
 ## Getting Started
