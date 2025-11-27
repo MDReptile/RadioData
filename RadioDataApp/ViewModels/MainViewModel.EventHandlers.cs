@@ -11,6 +11,11 @@ namespace RadioDataApp.ViewModels
         private void OnFileTransferProgressChanged(object? sender, double progress)
         {
             TransferProgress = progress * 100;
+            string fileName = _fileTransferService.CurrentFileName;
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                TransferStatus = $"Receiving {fileName}: {progress * 100:F0}%";
+            }
         }
 
         private void OnFileTransferDebugMessage(object? sender, string message)
@@ -30,7 +35,8 @@ namespace RadioDataApp.ViewModels
                 ChatLog += $"<< [Remote] RECEIVED FILE: {fileName} : Received {timestamp}\n";
                 
                 StatusMessage = $"File received: {fileName}";
-                TransferStatus = "Receive Complete";
+                TransferStatus = $"Completed: {fileName} ({_fileTransferService.ReceivedChunks} packets)";
+                TransferProgress = 100;
                 IsReceiving = false;
                 IsTransferring = false;
                 DebugLog += $"<< File received: {fileName}\n";
