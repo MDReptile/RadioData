@@ -47,6 +47,14 @@ namespace RadioDataApp.Services
         public string CurrentFileName => _currentFileName;
         public bool IsReceivingFile => _isReceivingFile;
 
+        public void NotifyAudioReceived()
+        {
+            if (_isReceivingFile)
+            {
+                _lastPacketTime = DateTime.Now;
+            }
+        }
+
         public class FileOverwriteEventArgs : EventArgs
         {
             public string FilePath { get; set; } = "";

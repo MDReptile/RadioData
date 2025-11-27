@@ -61,6 +61,10 @@ namespace RadioDataApp.ViewModels
                         _silenceTimer.Stop();
                         _silenceTimer.Start();
                     }
+                    else
+                    {
+                        _fileTransferService.NotifyAudioReceived();
+                    }
                 }
 
                 var packet = _modem.Demodulate(audioData);
