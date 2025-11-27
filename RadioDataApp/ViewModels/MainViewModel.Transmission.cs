@@ -59,6 +59,7 @@ namespace RadioDataApp.ViewModels
                     _transmissionMonitorTimer.Stop();
                     IsTransmitting = false;
                     StatusMessage = "Ready";
+                    MessageToSend = "Hello World";
                 }
             };
             _transmissionMonitorTimer.Start();
