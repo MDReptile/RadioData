@@ -11,11 +11,11 @@ namespace RadioDataApp.Services
     public class FileTransferService
     {
         private const int MaxChunkSize = 200;
-        private const double FirstPacketTimeSeconds = 4.0;
-        private const double OtherPacketTimeSeconds = 2.5;
-        private const double TimeoutBufferSeconds = 10.0;
-        private const double SilenceTimeoutSeconds = 5.0; // Timeout if no packets for 5s (dead air detection)
-        private const double InitialChunkTimeoutSeconds = 10.0;
+        private const double FirstPacketTimeSeconds = 7.0;
+        private const double OtherPacketTimeSeconds = 5.0;
+        private const double TimeoutBufferSeconds = 12.0;
+        private const double SilenceTimeoutSeconds = 8.0; // Timeout if no packets for 5s (dead air detection)
+        private const double InitialChunkTimeoutSeconds = 15.0;
 
         private readonly ImageCompressionService _imageCompressionService = new();
         private readonly System.Timers.Timer _timeoutTimer;
@@ -225,7 +225,7 @@ namespace RadioDataApp.Services
                     _maxExpectedTimeSeconds = FirstPacketTimeSeconds + (_expectedChunks * OtherPacketTimeSeconds) + TimeoutBufferSeconds;
                     _timeoutTimer.Start();
 
-                    double estimatedAudioDuration = 1.2 + (_expectedChunks * 2.1) + 0.8;
+                    double estimatedAudioDuration = 1.2 + (_expectedChunks * 4.2) + 0.8;
                     string debugMsg = $">> File: {_currentFileName}\n" +
                                     $"Size: {_totalFileSize / 1024.0:F1} KB\n" +
                                     $"Packets: {_expectedChunks}\n" +

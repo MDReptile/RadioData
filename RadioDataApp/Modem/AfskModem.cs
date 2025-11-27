@@ -7,7 +7,7 @@ namespace RadioDataApp.Modem
     public class AfskModem
     {
         private const int SampleRate = 44100;
-        private const int BaudRate = 1000; // Testing 1000 baud (4x faster than 250)
+        private const int BaudRate = 500; // Reduced from 1000 to 500 for better reliability
         private const int MarkFreq = 1200;
         private const int SpaceFreq = 2200;
         private const double SamplesPerBit = (double)SampleRate / BaudRate;
