@@ -6,6 +6,7 @@
 #pragma warning disable CS8604
 
 using NAudio.Wave;
+using NAudio.CoreAudioApi;
 using System;
 using System.Collections.Generic;
 using System.Windows.Threading;
@@ -46,6 +47,27 @@ namespace RadioDataApp.Services
                 devices.Add(WaveOut.GetCapabilities(i));
             }
             return devices;
+        }
+
+        public static float GetOutputDeviceVolume(int deviceIndex)
+        {
+            try
+            {
+                var enumerator = new MMDeviceEnumerator();
+                var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                
+                if (deviceIndex >= 0 && deviceIndex < devices.Count)
+                {
+                    var device = devices[deviceIndex];
+                    return device.AudioEndpointVolume.MasterVolumeLevelScalar;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AudioService] Error getting device volume: {ex.Message}");
+            }
+            
+            return 1.0f; // Return 100% if unable to get volume
         }
 
         public void StartListening(int deviceNumber)

@@ -109,6 +109,28 @@ namespace RadioDataApp.ViewModels
                     StatusMessage = $"Output: {deviceName}";
                     Console.WriteLine($"[DeviceSelection] Real device index {realDeviceIndex}: {deviceName}");
                     DebugLog += $"[DeviceSelection] Device {realDeviceIndex}: {deviceName}\n";
+                    
+                    // Check device volume
+                    float deviceVolume = AudioService.GetOutputDeviceVolume(realDeviceIndex);
+                    int volumePercent = (int)(deviceVolume * 100);
+                    Console.WriteLine($"[DeviceSelection] Device volume: {volumePercent}%");
+                    DebugLog += $"[DeviceSelection] Device volume: {volumePercent}%\n";
+                    
+                    if (deviceVolume < 0.15f)
+                    {
+                        System.Windows.MessageBox.Show(
+                            $"?? LOW VOLUME WARNING\n\n" +
+                            $"Output Device: {deviceName}\n" +
+                            $"Current Volume: {volumePercent}%\n\n" +
+                            $"This volume level may be too low to trigger radio VOX.\n\n" +
+                            $"Recommended: Increase device volume to at least 15-20% in Windows Sound Settings.\n\n" +
+                            $"Tip: You can also use the 'Output Gain' slider in Advanced Tuning to boost transmission volume.",
+                            "Low Device Volume",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Warning);
+                        
+                        DebugLog += $"[WARNING] Device volume too low ({volumePercent}%) - may not trigger VOX\n";
+                    }
                 }
                 else
                 {
