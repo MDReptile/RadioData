@@ -127,8 +127,22 @@ namespace RadioDataApp.Services
             _timeoutTimer.Stop();
             _isReceivingFile = false;
 
+            // List missing chunks
+            var missingChunks = new List<int>();
+            for (int i = 0; i < _expectedChunks; i++)
+            {
+                if (!_receivedChunkIds.Contains(i))
+                {
+                    missingChunks.Add(i);
+                }
+            }
+
+            string missingChunksStr = missingChunks.Count > 0 
+                ? $"Missing chunks: {string.Join(", ", missingChunks)}" 
+                : "All chunks received but not processed";
+
             TimeoutOccurred?.Invoke(this, message);
-            DebugMessage?.Invoke(this, $"\n=== {message} ===\nReceived {_receivedChunkIds.Count}/{_expectedChunks} chunks\n");
+            DebugMessage?.Invoke(this, $"\n=== {message} ===\nReceived {_receivedChunkIds.Count}/{_expectedChunks} chunks\n{missingChunksStr}\n");
         }
 
         public List<byte[]> PrepareFileForTransmission(string filePath)
@@ -261,7 +275,7 @@ namespace RadioDataApp.Services
                             double progress = (double)_receivedChunkIds.Count / _expectedChunks;
                             ProgressChanged?.Invoke(this, progress);
 
-                            string debugMsg = $"Chunk {seqId + 1}/{_expectedChunks} ({progress:P0}) | Gap: {timeSinceLastChunk:F2}s | Total: {totalElapsed:F2}s | Time: {now:HH:mm:ss.fff}";
+                            string debugMsg = $"Chunk #{seqId} received | {_receivedChunkIds.Count}/{_expectedChunks} ({progress:P0}) | Gap: {timeSinceLastChunk:F2}s | Total: {totalElapsed:F2}s | Time: {now:HH:mm:ss.fff}";
                             DebugMessage?.Invoke(this, debugMsg);
                             Console.WriteLine($"[FileTransfer] Received chunk {seqId}. Progress: {progress:P0}");
 
@@ -272,7 +286,7 @@ namespace RadioDataApp.Services
                         }
                         else
                         {
-                            DebugMessage?.Invoke(this, $"[RX TIMING] Duplicate chunk {seqId + 1} ignored");
+                            DebugMessage?.Invoke(this, $"[RX TIMING] Duplicate chunk #{seqId} ignored");
                         }
                     }
                 }
