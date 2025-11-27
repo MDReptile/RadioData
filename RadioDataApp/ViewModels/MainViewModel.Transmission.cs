@@ -40,6 +40,16 @@ namespace RadioDataApp.ViewModels
             StartVisualization(audioSamples);
 
             int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
+            
+            if (!_audioService.IsOutputLoopbackMode)
+            {
+                var outputs = AudioService.GetOutputDevices();
+                if (deviceIndex >= 0 && deviceIndex < outputs.Count)
+                {
+                    DebugLog += $"[TX] Using output device [{deviceIndex}]: {outputs[deviceIndex].ProductName}\n";
+                }
+            }
+            
             _audioService.StartTransmitting(deviceIndex, audioSamples);
 
             MessageToSend = string.Empty;
@@ -276,8 +286,18 @@ namespace RadioDataApp.ViewModels
                         DebugLog += $"[TX] Generated continuous audio: {FormatDuration(totalDurationSeconds)} | {packets.Count} packets with phase continuity\n";
                         
                         int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
-                        _audioService.StartTransmitting(deviceIndex, finalAudio);
                         
+                        if (!_audioService.IsOutputLoopbackMode)
+                        {
+                            var outputs = AudioService.GetOutputDevices();
+                            if (deviceIndex >= 0 && deviceIndex < outputs.Count)
+                            {
+                                DebugLog += $"[TX] Using output device [{deviceIndex}]: {outputs[deviceIndex].ProductName}\n";
+                            }
+                        }
+                        
+                        _audioService.StartTransmitting(deviceIndex, finalAudio);
+
                         StartVisualization(finalAudio);
                         
                         _transmissionMonitorTimer?.Stop();

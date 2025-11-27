@@ -99,16 +99,26 @@ namespace RadioDataApp.Services
                 return;
             }
 
-            Console.WriteLine("[AudioService] InitializeTransmission called with device index: " + deviceNumber);
+            Console.WriteLine("[AudioService] ===== INITIALIZING OUTPUT TRANSMISSION =====");
+            Console.WriteLine("[AudioService] Requested device index: " + deviceNumber);
 
             var outputs = GetOutputDevices();
+            Console.WriteLine("[AudioService] Total output devices available: " + outputs.Count);
+            
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                string marker = (i == deviceNumber) ? " <-- SELECTED" : "";
+                Console.WriteLine($"[AudioService]   [{i}] {outputs[i].ProductName}{marker}");
+            }
+
             if (deviceNumber >= 0 && deviceNumber < outputs.Count)
             {
-                Console.WriteLine("[AudioService] Opening output device: " + outputs[deviceNumber].ProductName);
+                Console.WriteLine("[AudioService] ? Valid device index, opening: " + outputs[deviceNumber].ProductName);
             }
             else
             {
-                Console.WriteLine("[AudioService] ERROR: Device index " + deviceNumber + " out of range (0-" + (outputs.Count - 1) + ")");
+                Console.WriteLine("[AudioService] ? ERROR: Device index " + deviceNumber + " out of range (0-" + (outputs.Count - 1) + ")");
+                Console.WriteLine("[AudioService] ? Audio will likely play on Windows default device!");
             }
 
             StopTransmission();
@@ -126,7 +136,8 @@ namespace RadioDataApp.Services
 
             _waveOut.Init(_bufferedWaveProvider);
             _waveOut.Play();
-            Console.WriteLine("[AudioService] Started playback on device " + deviceNumber);
+            Console.WriteLine("[AudioService] ? Playback started on device index " + deviceNumber);
+            Console.WriteLine("[AudioService] ==========================================");
         }
 
         public void QueueAudio(byte[] audioData)
