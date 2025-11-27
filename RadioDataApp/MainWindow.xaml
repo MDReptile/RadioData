@@ -209,10 +209,10 @@
                     </TextBlock>
                     
                     <Button DockPanel.Dock="Right"
+                            x:Name="DeleteDataButton"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
-                            Command="{Binding ClearLogsCommand}"
-                            Content="Clear Logs"
+                            Content="Delete Data"
                             Style="{DynamicResource MaterialDesignOutlinedButton}"
                             Foreground="{StaticResource TerminalRed}"
                             BorderBrush="{StaticResource TerminalRed}"
@@ -220,40 +220,35 @@
                             Height="28"
                             FontSize="11"
                             Margin="8,0,0,0"
-                            ToolTip="Clear all chat history and system logs"/>
-                    
-                    <Grid DockPanel.Dock="Right"
-                          HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                          Width="250">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBox Grid.Column="0"
-                                 x:Name="ClientNameBox"
-                                 Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"
-                                 MaxLength="10"
-                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                                 Foreground="{StaticResource TerminalGreen}"
-                                 CaretBrush="{StaticResource TerminalGreen}"
-                                 materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
-                                 materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"
-                                 BorderBrush="{StaticResource TerminalGreen}"
-                                 FontSize="12"
-                                 Padding="8,6"
-                                 Margin="0,0,8,0"
-                                 KeyDown="ClientNameBox_KeyDown"
-                                 ToolTip="Your identifier shown in chat messages (max 10 chars). Auto-generated on first launch."/>
-                        
-                        <TextBlock Grid.Column="1"
-                                   VerticalAlignment="Center"
-                                   FontSize="11"
-                                   Foreground="{StaticResource TerminalGreen}"
-                                   Opacity="0.7"
-                                   Text="{Binding ClientName.Length, StringFormat={}{0} / 10, FallbackValue=0 / 10}"/>
-                    </Grid>
+                            Click="DeleteDataButton_Click"
+                            ToolTip="Open menu to selectively delete logs, files, or reset settings">
+                        <Button.ContextMenu>
+                            <ContextMenu Background="#2D2D30" BorderBrush="{StaticResource TerminalGreen}">
+                                <MenuItem Header="Clear Chat History" 
+                                          Command="{Binding ClearChatCommand}"
+                                          Foreground="{StaticResource TerminalGreen}"
+                                          ToolTip="Remove all chat messages from display and storage"/>
+                                <MenuItem Header="Clear System Log" 
+                                          Command="{Binding ClearSystemLogCommand}"
+                                          Foreground="{StaticResource TerminalGreen}"
+                                          ToolTip="Clear the system log (transmission/reception events)"/>
+                                <MenuItem Header="Delete Received Files..." 
+                                          Command="{Binding DeleteReceivedFilesCommand}"
+                                          Foreground="{StaticResource TerminalGreen}"
+                                          ToolTip="Delete all files in the ReceivedFiles folder"/>
+                                <Separator Background="#4CAF50" Opacity="0.3"/>
+                                <MenuItem Header="Reset Settings to Default..." 
+                                          Command="{Binding ResetSettingsCommand}"
+                                          Foreground="#FFA726"
+                                          ToolTip="Reset encryption key, client name, and all tuning parameters"/>
+                                <MenuItem Header="Reset Everything..." 
+                                          Command="{Binding ResetEverythingCommand}"
+                                          Foreground="{StaticResource TerminalRed}"
+                                          FontWeight="Bold"
+                                          ToolTip="Clear all logs, delete files, and reset all settings to factory defaults"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                 </DockPanel>
             </Border>
 
