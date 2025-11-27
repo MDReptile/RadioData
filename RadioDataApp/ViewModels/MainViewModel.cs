@@ -601,7 +601,8 @@ namespace RadioDataApp.ViewModels
                         case CustomProtocol.PacketType.Text:
                             string receivedMessage = System.Text.Encoding.ASCII.GetString(packet.Payload);
                             string senderName = packet.SenderName ?? "Remote";
-                            ChatLog += $"<< [{senderName}] {receivedMessage}\n";
+                            string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
+                            ChatLog += $"<< [{senderName}] {receivedMessage} : Received {timestamp}\n";
                             break;
                         case CustomProtocol.PacketType.FileHeader:
                             DebugLog += "\n=== RECEIVING FILE ===\n";
@@ -664,7 +665,8 @@ namespace RadioDataApp.ViewModels
             IsTransmitting = true;
             StatusMessage = "Transmitting...";
 
-            ChatLog += $">> [{ClientName}] {MessageToSend}\n";
+            string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
+            ChatLog += $">> [{ClientName}] {MessageToSend} : Sent {timestamp}\n";
 
             byte[] packet = CustomProtocol.Encode(MessageToSend, ClientName);
             byte[] audioSamples = _modem.Modulate(packet);
