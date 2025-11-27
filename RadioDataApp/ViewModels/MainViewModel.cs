@@ -601,7 +601,6 @@ namespace RadioDataApp.ViewModels
                         case CustomProtocol.PacketType.Text:
                             string receivedMessage = System.Text.Encoding.ASCII.GetString(packet.Payload);
                             string senderName = packet.SenderName ?? "Remote";
-                            DebugLog += $"RX: {receivedMessage}\n";
                             ChatLog += $"<< [{senderName}] {receivedMessage}\n";
                             break;
                         case CustomProtocol.PacketType.FileHeader:
@@ -665,7 +664,6 @@ namespace RadioDataApp.ViewModels
             IsTransmitting = true;
             StatusMessage = "Transmitting...";
 
-            DebugLog += $"TX: {MessageToSend}\n";
             ChatLog += $">> [{ClientName}] {MessageToSend}\n";
 
             byte[] packet = CustomProtocol.Encode(MessageToSend, ClientName);

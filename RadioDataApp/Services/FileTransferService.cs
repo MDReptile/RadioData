@@ -14,7 +14,7 @@ namespace RadioDataApp.Services
         private const double FirstPacketTimeSeconds = 13.5;
         private const double OtherPacketTimeSeconds = 9.5;
         private const double TimeoutBufferSeconds = 15.0;
-        private const double SilenceTimeoutSeconds = 10.0; // Timeout if no packets for 10s
+        private const double SilenceTimeoutSeconds = 20.0; // Timeout if no packets for 20s (must be > 9.5s per packet + margin)
 
         private readonly ImageCompressionService _imageCompressionService = new();
         private readonly System.Timers.Timer _timeoutTimer;
@@ -177,7 +177,9 @@ namespace RadioDataApp.Services
                     // Initialize timeout tracking
                     _receptionStartTime = DateTime.Now;
                     _lastPacketTime = DateTime.Now;
-                    _maxExpectedTimeSeconds = FirstPacketTimeSeconds + (_expectedChunks - 1) * OtherPacketTimeSeconds + TimeoutBufferSeconds;
+                    // Total time = first packet (header with preamble) + all data chunks + buffer
+                    // Header takes FirstPacketTimeSeconds, then _expectedChunks data packets each take OtherPacketTimeSeconds
+                    _maxExpectedTimeSeconds = FirstPacketTimeSeconds + (_expectedChunks * OtherPacketTimeSeconds) + TimeoutBufferSeconds;
                     _timeoutTimer.Start();
 
                     string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}\nMax time: {_maxExpectedTimeSeconds:F1}s";

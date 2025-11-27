@@ -221,9 +221,9 @@ This is typically caused by differences in audio hardware characteristics betwee
 Files are split into 200-byte chunks and transmitted sequentially. Each chunk includes a sequence ID for reassembly. The receiver tracks received chunks and reports progress. Timeout detection alerts if transfer stalls.
 
 **Timeout Settings**:
-- Silence timeout: 2 seconds without signal above squelch threshold
-- Packet timeout: 10 seconds without valid packets during active transfer
-- Max time: Calculated as `chunks × 9.5s + 13.5s (first packet) + 10s buffer`
+- Silence timeout: 20 seconds without any packets (allows for normal 9.5s inter-packet delay)
+- Total transfer timeout: Calculated as `13.5s (header) + (chunks × 9.5s) + 15s buffer`
+- Transfer is considered failed only if no packets arrive for 20 seconds or total time exceeds the calculated maximum
 
 ### Settings Storage
 
