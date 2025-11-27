@@ -45,22 +45,22 @@ namespace RadioDataApp.ViewModels
                         IsReceiving = true;
                     }
 
-                    if (_silenceTimer == null)
+                    if (!IsTransferring)
                     {
-                        _silenceTimer = new DispatcherTimer();
-                        _silenceTimer.Interval = TimeSpan.FromSeconds(2);
-                        _silenceTimer.Tick += (s, args) =>
+                        if (_silenceTimer == null)
                         {
-                            if (!IsTransferring)
+                            _silenceTimer = new DispatcherTimer();
+                            _silenceTimer.Interval = TimeSpan.FromSeconds(2);
+                            _silenceTimer.Tick += (s, args) =>
                             {
                                 IsReceiving = false;
-                            }
-                            _silenceTimer.Stop();
-                        };
-                    }
+                                _silenceTimer.Stop();
+                            };
+                        }
 
-                    _silenceTimer.Stop();
-                    _silenceTimer.Start();
+                        _silenceTimer.Stop();
+                        _silenceTimer.Start();
+                    }
                 }
 
                 var packet = _modem.Demodulate(audioData);
@@ -78,6 +78,7 @@ namespace RadioDataApp.ViewModels
                             DebugLog += "\n=== RECEIVING FILE ===\n";
                             DebugLog += "<< Incoming file transfer\n";
                             IsTransferring = true;
+                            _silenceTimer?.Stop();
                             _fileTransferService.HandlePacket(packet);
                             break;
                         case CustomProtocol.PacketType.FileChunk:
