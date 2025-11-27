@@ -4,7 +4,7 @@
 
 Transfer text messages and files over audio using AFSK modulation for ham radio, walkie-talkies, or any audio link.
 
-![RadioData Application Screenshot](screenshot.png)
+![RadioData Application Screenshot](screenshot.png?v=73)
 
 ### Example Hardware Configuration
 
