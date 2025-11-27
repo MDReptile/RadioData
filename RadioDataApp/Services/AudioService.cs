@@ -49,18 +49,32 @@ namespace RadioDataApp.Services
             return devices;
         }
 
-        public static float GetOutputDeviceVolume(int deviceIndex)
+        public static float GetOutputDeviceVolume(int waveOutDeviceIndex)
         {
             try
             {
+                // Get the WaveOut device name
+                var waveOutCaps = WaveOut.GetCapabilities(waveOutDeviceIndex);
+                string targetDeviceName = waveOutCaps.ProductName;
+                
+                Console.WriteLine($"[AudioService] Looking for volume of WaveOut device: {targetDeviceName}");
+                
+                // Find matching MMDevice by name
                 var enumerator = new MMDeviceEnumerator();
                 var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
                 
-                if (deviceIndex >= 0 && deviceIndex < devices.Count)
+                foreach (var device in devices)
                 {
-                    var device = devices[deviceIndex];
-                    return device.AudioEndpointVolume.MasterVolumeLevelScalar;
+                    // MMDevice names often contain the same product name
+                    if (device.FriendlyName.Contains(targetDeviceName) || targetDeviceName.Contains(device.FriendlyName))
+                    {
+                        float volume = device.AudioEndpointVolume.MasterVolumeLevelScalar;
+                        Console.WriteLine($"[AudioService] Matched MMDevice: {device.FriendlyName}, Volume: {(int)(volume * 100)}%");
+                        return volume;
+                    }
                 }
+                
+                Console.WriteLine($"[AudioService] Could not find matching MMDevice for: {targetDeviceName}");
             }
             catch (Exception ex)
             {
