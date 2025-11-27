@@ -24,7 +24,16 @@ namespace RadioDataApp
         {
             InitializeComponent();
 
-            Loaded += (s, e) => CenterWindowOnPrimaryScreen();
+            Loaded += (s, e) => 
+            {
+                CenterWindowOnPrimaryScreen();
+                
+                Dispatcher.InvokeAsync(() =>
+                {
+                    ChatScrollViewer?.ScrollToBottom();
+                    LogScrollViewer?.ScrollToBottom();
+                }, System.Windows.Threading.DispatcherPriority.Loaded);
+            };
 
             // Subscribe to ViewModel's PropertyChanged event for auto-scroll
             if (DataContext is MainViewModel viewModel)
