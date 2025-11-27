@@ -195,18 +195,24 @@ namespace RadioDataApp.ViewModels
             int packetCount = (int)Math.Ceiling(fileSize / 200.0) + 1;
 
             double estimatedSeconds = 1.2 + ((packetCount - 1) * 4.2) + 0.8;
+            string timeStr = FormatDuration(estimatedSeconds);
 
-            if (estimatedSeconds > 30)
+            // Warn about very long transfers (>5 minutes)
+            if (estimatedSeconds > 300)
             {
-                string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
                 var result = System.Windows.MessageBox.Show(
-                    $"WARNING: Long Transfer Time\n\n" +
-                    $"File size: {fileSize / 1024.0:F1} KB\n" +
+                    $"VERY LONG TRANSFER TIME\n\n" +
+                    $"File: {fileName}\n" +
+                    $"Size: {fileSize / 1024.0:F1} KB\n" +
+                    $"Packets: {packetCount}\n" +
                     $"Estimated time: {timeStr}\n\n" +
-                    $"This application is designed for small files (< 30 seconds).\n" +
-                    $"Longer transfers may fail due to radio/VOX limitations.\n\n" +
+                    $"?? This transfer may:\n" +
+                    $"• Take a very long time to complete\n" +
+                    $"• Fail if radio connection is interrupted\n" +
+                    $"• Exceed audio buffer capacity (>10 min may fail)\n\n" +
+                    $"Consider compressing the file or sending a smaller version.\n\n" +
                     $"Continue anyway?",
-                    "File Transfer Warning",
+                    "Long Transfer Warning",
                     System.Windows.MessageBoxButton.YesNo,
                     System.Windows.MessageBoxImage.Warning);
                 if (result != System.Windows.MessageBoxResult.Yes)
@@ -214,9 +220,13 @@ namespace RadioDataApp.ViewModels
             }
             else if (fileSize > 1024 && !_transferIsCompressed)
             {
-                string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
                 var result = System.Windows.MessageBox.Show(
-                    $"File size: {fileSize / 1024.0:F1} KB\nPackets: {packetCount}\nEstimated time: {timeStr}\n\nContinue?",
+                    $"File Transfer Confirmation\n\n" +
+                    $"File: {fileName}\n" +
+                    $"Size: {fileSize / 1024.0:F1} KB\n" +
+                    $"Packets: {packetCount}\n" +
+                    $"Estimated time: {timeStr}\n\n" +
+                    $"Continue?",
                     "File Transfer",
                     System.Windows.MessageBoxButton.YesNo,
                     System.Windows.MessageBoxImage.Information);
@@ -232,7 +242,7 @@ namespace RadioDataApp.ViewModels
             DebugLog += $">> File: {fileName}\n";
             DebugLog += $"Size: {fileSize / 1024.0:F1} KB\n";
             DebugLog += $"Packets: {packetCount}\n";
-            DebugLog += $"Est. time: {estimatedSeconds:F0}s\n";
+            DebugLog += $"Est. time: {timeStr}\n";
             DebugLog += "====================\n";
 
             _transferStartTime = DateTime.Now;
@@ -263,7 +273,7 @@ namespace RadioDataApp.ViewModels
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         StatusMessage = $"Sending: {fileName}";
-                        DebugLog += $"[TX] Generated continuous audio: {totalDurationSeconds:F1}s | {packets.Count} packets with phase continuity\n";
+                        DebugLog += $"[TX] Generated continuous audio: {FormatDuration(totalDurationSeconds)} | {packets.Count} packets with phase continuity\n";
                         
                         int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
                         _audioService.StartTransmitting(deviceIndex, finalAudio);
@@ -307,7 +317,7 @@ namespace RadioDataApp.ViewModels
                                 IsTransferring = false;
                                 OutputFrequency = 1000;
                                 OutputVolume = 0;
-                                DebugLog += $"[TX TIMING] Transfer complete in {totalTransferTime:F2}s\n";
+                                DebugLog += $"[TX TIMING] Transfer complete in {FormatDuration(totalTransferTime)}\n";
                                 DebugLog += ">> File send complete\n";
                                 DebugLog += "====================\n\n";
                                 
@@ -331,6 +341,26 @@ namespace RadioDataApp.ViewModels
                     });
                 }
             });
+        }
+
+        private string FormatDuration(double seconds)
+        {
+            if (seconds < 60)
+            {
+                return $"{seconds:F0}s";
+            }
+            else if (seconds < 3600)
+            {
+                int minutes = (int)(seconds / 60);
+                int secs = (int)(seconds % 60);
+                return $"{minutes}m {secs}s";
+            }
+            else
+            {
+                int hours = (int)(seconds / 3600);
+                int minutes = (int)((seconds % 3600) / 60);
+                return $"{hours}h {minutes}m";
+            }
         }
     }
 }
