@@ -85,6 +85,26 @@ namespace RadioDataApp.Services
             return DangerousExtensions.Contains(extension);
         }
 
+        private static string FormatDuration(double seconds)
+        {
+            if (seconds < 60)
+            {
+                return $"{seconds:F0}s";
+            }
+            else if (seconds < 3600)
+            {
+                int minutes = (int)(seconds / 60);
+                int secs = (int)(seconds % 60);
+                return $"{minutes}m {secs}s";
+            }
+            else
+            {
+                int hours = (int)(seconds / 3600);
+                int minutes = (int)((seconds % 3600) / 60);
+                return $"{hours}h {minutes}m";
+            }
+        }
+
         public FileTransferService()
         {
             // Initialize timeout timer (check every 500ms for faster dead air detection)
@@ -198,7 +218,7 @@ namespace RadioDataApp.Services
                     Console.WriteLine($"[FileTransfer] Previous transmission incomplete: {oldReceived}/{oldExpected} chunks");
                     
                     string warningMsg = $"[TRANSFER FAILED] Previous file '{oldFileName}' incomplete ({oldReceived}/{oldExpected} chunks)\n" +
-                                       $"Starting new transmission...";
+                                       $"New transmission detected, abandoning previous transfer...";
                     DebugMessage?.Invoke(this, warningMsg);
                     
                     // Clean up old transfer
@@ -229,7 +249,7 @@ namespace RadioDataApp.Services
                     string debugMsg = $">> File: {_currentFileName}\n" +
                                     $"Size: {_totalFileSize / 1024.0:F1} KB\n" +
                                     $"Packets: {_expectedChunks}\n" +
-                                    $"Est. audio: {estimatedAudioDuration:F0}s\n" +
+                                    $"Est. time: {FormatDuration(estimatedAudioDuration)}\n" +
                                     $"====================\n" +
                                     $"[RX TIMING] Header received at {DateTime.Now:HH:mm:ss.fff}";
                     DebugMessage?.Invoke(this, debugMsg);
@@ -254,7 +274,7 @@ namespace RadioDataApp.Services
                     double delayAfterHeader = (now - _receptionStartTime).TotalSeconds;
                     _firstChunkReceived = true;
                     Console.WriteLine($"[FileTransfer] First chunk received, switching to {SilenceTimeoutSeconds}s inter-chunk timeout");
-                    DebugMessage?.Invoke(this, $"[RX TIMING] First chunk after {delayAfterHeader:F2}s");
+                    DebugMessage?.Invoke(this, $"[RX TIMING] First chunk after {FormatDuration(delayAfterHeader)}");
                 }
 
                 try
@@ -279,7 +299,7 @@ namespace RadioDataApp.Services
                             double progress = (double)_receivedChunkIds.Count / _expectedChunks;
                             ProgressChanged?.Invoke(this, progress);
 
-                            string debugMsg = $"Chunk #{seqId} received | {_receivedChunkIds.Count}/{_expectedChunks} ({progress:P0}) | Gap: {timeSinceLastChunk:F2}s | Total: {totalElapsed:F2}s | Time: {now:HH:mm:ss.fff}";
+                            string debugMsg = $"Chunk #{seqId} received | {_receivedChunkIds.Count}/{_expectedChunks} ({progress:P0}) | Gap: {FormatDuration(timeSinceLastChunk)} | Total: {FormatDuration(totalElapsed)} | Time: {now:HH:mm:ss.fff}";
                             DebugMessage?.Invoke(this, debugMsg);
                             Console.WriteLine($"[FileTransfer] Received chunk {seqId}. Progress: {progress:P0}");
 
@@ -311,7 +331,7 @@ namespace RadioDataApp.Services
         {
             double totalTime = (DateTime.Now - _receptionStartTime).TotalSeconds;
             Console.WriteLine($"[FileTransfer] FinishReception called. Chunks received: {_receivedChunkIds.Count}/{_expectedChunks}");
-            DebugMessage?.Invoke(this, $"[RX TIMING] Transfer complete in {totalTime:F2}s\n" +
+            DebugMessage?.Invoke(this, $"[RX TIMING] Transfer complete in {FormatDuration(totalTime)}\n" +
                                       $"<< File received: {_currentFileName}\n" +
                                       $"====================\n");
             
