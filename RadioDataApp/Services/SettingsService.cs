@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace RadioDataApp.Services
@@ -7,7 +8,9 @@ namespace RadioDataApp.Services
     public class SettingsService
     {
         private const string SettingsFileName = "RadioData.settings.json";
+        private const string ChatHistoryFileName = "RadioData.chat.enc";
         private readonly string _settingsPath;
+        private readonly string _chatHistoryPath;
 
         public class AppSettings
         {
@@ -35,6 +38,7 @@ namespace RadioDataApp.Services
             }
 
             _settingsPath = Path.Combine(appDataPath, SettingsFileName);
+            _chatHistoryPath = Path.Combine(appDataPath, ChatHistoryFileName);
         }
 
         public AppSettings LoadSettings()
@@ -67,6 +71,82 @@ namespace RadioDataApp.Services
             {
                 Console.WriteLine($"[Settings] Error saving settings: {ex.Message}");
             }
+        }
+
+        public void SaveChatHistory(string chatLog, string encryptionKey)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(chatLog))
+                {
+                    // If chat log is empty, delete the file if it exists
+                    if (File.Exists(_chatHistoryPath))
+                    {
+                        File.Delete(_chatHistoryPath);
+                        Console.WriteLine($"[ChatHistory] Deleted empty chat history");
+                    }
+                    return;
+                }
+
+                byte[] chatBytes = Encoding.UTF8.GetBytes(chatLog);
+                byte[] encrypted = XorEncrypt(chatBytes, encryptionKey);
+                File.WriteAllBytes(_chatHistoryPath, encrypted);
+                Console.WriteLine($"[ChatHistory] Saved encrypted chat history ({chatBytes.Length} bytes)");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChatHistory] Error saving chat history: {ex.Message}");
+            }
+        }
+
+        public string LoadChatHistory(string encryptionKey)
+        {
+            try
+            {
+                if (File.Exists(_chatHistoryPath))
+                {
+                    byte[] encrypted = File.ReadAllBytes(_chatHistoryPath);
+                    byte[] decrypted = XorEncrypt(encrypted, encryptionKey);
+                    string chatLog = Encoding.UTF8.GetString(decrypted);
+                    Console.WriteLine($"[ChatHistory] Loaded chat history ({encrypted.Length} bytes encrypted)");
+                    return chatLog;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChatHistory] Error loading chat history: {ex.Message}");
+            }
+
+            return string.Empty;
+        }
+
+        public void DeleteChatHistory()
+        {
+            try
+            {
+                if (File.Exists(_chatHistoryPath))
+                {
+                    File.Delete(_chatHistoryPath);
+                    Console.WriteLine($"[ChatHistory] Deleted chat history file");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChatHistory] Error deleting chat history: {ex.Message}");
+            }
+        }
+
+        private byte[] XorEncrypt(byte[] data, string key)
+        {
+            byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+            byte[] result = new byte[data.Length];
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                result[i] = (byte)(data[i] ^ keyBytes[i % keyBytes.Length]);
+            }
+
+            return result;
         }
     }
 }

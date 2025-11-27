@@ -125,6 +125,20 @@
                     RadioData - Audio Data Transfer
                 </TextBlock>
                 
+                <Button DockPanel.Dock="Right"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Command="{Binding ClearLogsCommand}"
+                        Content="Clear Logs"
+                        Style="{DynamicResource MaterialDesignOutlinedButton}"
+                        Foreground="{StaticResource TerminalRed}"
+                        BorderBrush="{StaticResource TerminalRed}"
+                        Padding="8,4"
+                        Height="28"
+                        FontSize="11"
+                        Margin="8,0,0,0"
+                        ToolTip="Clear all chat history and system logs"/>
+                
                 <TextBox DockPanel.Dock="Right"
                          HorizontalAlignment="Right"
                          VerticalAlignment="Center"

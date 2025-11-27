@@ -115,6 +115,12 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private string _chatLog = "";
 
+        partial void OnChatLogChanged(string value)
+        {
+            // Auto-save chat history whenever it changes
+            _settingsService.SaveChatHistory(value, EncryptionKey);
+        }
+
         [ObservableProperty]
         private string _clientName = "";
 
@@ -312,6 +318,13 @@ namespace RadioDataApp.ViewModels
             Console.WriteLine($"[Settings] Loaded squelch threshold: {_squelchThreshold:F3}");
             Console.WriteLine($"[Settings] Loaded compress images: {_compressImages}");
 
+            // Load chat history (must be after encryption key is loaded)
+            _chatLog = _settingsService.LoadChatHistory(_encryptionKey);
+            if (!string.IsNullOrEmpty(_chatLog))
+            {
+                Console.WriteLine($"[ChatHistory] Restored previous chat history");
+            }
+
             // Wire up service events
             _fileTransferService.ProgressChanged += OnFileTransferProgressChanged;
             _fileTransferService.DebugMessage += OnFileTransferDebugMessage;
@@ -424,6 +437,9 @@ namespace RadioDataApp.ViewModels
             Application.Current.Dispatcher.Invoke(() =>
             {
                 string fileName = Path.GetFileName(path);
+                string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
+                ChatLog += $"<< [Remote] RECEIVED FILE: {fileName} : Received {timestamp}\n";
+                
                 StatusMessage = $"File received: {fileName}";
                 TransferStatus = "Receive Complete";
                 IsReceiving = false;
@@ -624,6 +640,25 @@ namespace RadioDataApp.ViewModels
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ReceivedFiles");
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             Process.Start("explorer.exe", path);
+        }
+
+        [RelayCommand]
+        private void ClearLogs()
+        {
+            var result = MessageBox.Show(
+                "This will clear all chat history and system logs.\n\nThis action cannot be undone.\n\nContinue?",
+                "Clear All Logs",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                ChatLog = string.Empty;
+                DebugLog = "RADIO_DATA_TERMINAL_INITIALIZED...\n";
+                _settingsService.DeleteChatHistory();
+                Console.WriteLine($"[ChatHistory] User cleared all logs");
+            }
         }
 
         [RelayCommand]
@@ -930,6 +965,9 @@ namespace RadioDataApp.ViewModels
                 // Done
                 _fileTransferTimer.Stop();
                 _audioService.StopTransmission();
+
+                string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
+                ChatLog += $">> [{ClientName}] SENT FILE: {fileName} : Sent {timestamp}\n";
 
                 StatusMessage = $"File sent: {fileName}";
                 TransferStatus = $"Completed: {fileName} ({_transferPackets?.Count ?? 0} packets)";
