@@ -613,75 +613,109 @@
                     <!-- Advanced Tuning (Top) -->
                     <GroupBox Grid.Row="0" Header="ADVANCED TUNING"
                               ToolTip="Fine-tune demodulation parameters to fix asymmetric send/receive issues. Adjust these if one direction works better than the other.">
-                        <StackPanel Margin="8">
-                            <TextBlock Text="Squelch Threshold (0.000 - 0.100)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0" 
-                                        Value="{Binding SquelchThreshold}" 
-                                        AutomationProperties.AutomationId="SquelchSlider"
-                                        Minimum="0.000" 
-                                        Maximum="0.100" 
-                                        TickFrequency="0.001"
-                                        IsSnapToTickEnabled="True"
-                                        Foreground="{StaticResource TerminalGreen}"
-                                        ToolTip="Minimum signal strength to attempt decoding. Increase if decoder tries to process background noise. Default 0.01 (1%). Try 0.02-0.05 if seeing garbage bytes from ambient noise."/>
-                            </Grid>
-
-                            <TextBlock Text="Input Gain (0.5x - 2.0x)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="40"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0" 
-                                        Value="{Binding InputGain}" 
-                                        AutomationProperties.AutomationId="InputGainSlider"
-                                        Minimum="0.5" 
-                                        Maximum="2.0" 
-                                        TickFrequency="0.1"
-                                        IsSnapToTickEnabled="True"
-                                        Foreground="{StaticResource TerminalGreen}"
-                                        ToolTip="Amplify weak input signals. Try 1.5x if receiving fails. Reduce to 0.8x if signal clips. Warning appears in log if too high."/>
-                            </Grid>
-
-                            <TextBlock Text="Zero-Crossing Threshold (10-20)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="40"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0" 
-                                        Value="{Binding ZeroCrossingThreshold}" 
-                                        AutomationProperties.AutomationId="ZeroCrossingSlider"
-                                        Minimum="10" 
-                                        Maximum="20" 
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"
-                                        Foreground="{StaticResource TerminalGreen}"
-                                        ToolTip="Distinguishes 1200 Hz from 2200 Hz tones. Lower (12) = more sensitive to high frequency, Higher (16) = more sensitive to low frequency. Adjust if one direction fails."/>
-                            </Grid>
-
-                            <TextBlock Text="Start Bit Compensation (-5.0 to +5.0)" Foreground="White" FontSize="10" Margin="0,0,0,2"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="40"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0" 
-                                        Value="{Binding StartBitCompensation}" 
-                                        AutomationProperties.AutomationId="StartBitSlider"
-                                        Minimum="-5.0" 
-                                        Maximum="5.0" 
-                                        TickFrequency="0.5"
-                                        IsSnapToTickEnabled="True"
-                                        Foreground="{StaticResource TerminalGreen}"
-                                        ToolTip="Adjusts timing offset for bit detection. Negative = more delay (slower detection), Positive = less delay (faster). Try -3.0 if getting garbled data."/>
-                            </Grid>
-                        </StackPanel>
+                        <Grid Margin="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="50"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Squelch -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Squelch:" VerticalAlignment="Center" Foreground="White" Margin="0,0,8,0"/>
+                            <Slider Grid.Row="0" Grid.Column="1"
+                                    Value="{Binding SquelchThreshold}"
+                                    AutomationProperties.AutomationId="SquelchSlider"
+                                    Minimum="0.000"
+                                    Maximum="0.100"
+                                    TickFrequency="0.001"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Minimum signal strength to decode. Default 0.01 (1%)"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" 
+                                       Text="{Binding SquelchThreshold, StringFormat=0.000}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"/>
+                            
+                            <!-- Input Gain -->
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Input Gain:" VerticalAlignment="Center" Foreground="White" Margin="0,0,8,0"/>
+                            <Slider Grid.Row="2" Grid.Column="1"
+                                    Value="{Binding InputGain}"
+                                    AutomationProperties.AutomationId="InputGainSlider"
+                                    Minimum="0.5"
+                                    Maximum="2.0"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Amplify weak input signals. Default 1.0x"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2"
+                                       Text="{Binding InputGain, StringFormat=0.0x}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"/>
+                            
+                            <!-- Output Gain -->
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Output Gain:" VerticalAlignment="Center" Foreground="White" Margin="0,0,8,0"/>
+                            <Slider Grid.Row="4" Grid.Column="1"
+                                    Value="{Binding OutputGain}"
+                                    AutomationProperties.AutomationId="OutputGainSlider"
+                                    Minimum="0.1"
+                                    Maximum="1.0"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Transmission volume. Default 0.5x (50%). Increase if radio VOX not triggering."/>
+                            <TextBlock Grid.Row="4" Grid.Column="2"
+                                       Text="{Binding OutputGain, StringFormat=0.0x}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"/>
+                            
+                            <!-- Zero-Crossing -->
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Zero-Cross:" VerticalAlignment="Center" Foreground="White" Margin="0,0,8,0"/>
+                            <Slider Grid.Row="6" Grid.Column="1"
+                                    Value="{Binding ZeroCrossingThreshold}"
+                                    AutomationProperties.AutomationId="ZeroCrossingSlider"
+                                    Minimum="10"
+                                    Maximum="20"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Distinguishes 1200 Hz from 2200 Hz. Default 14"/>
+                            <TextBlock Grid.Row="6" Grid.Column="2"
+                                       Text="{Binding ZeroCrossingThreshold}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"/>
+                            
+                            <!-- Start Bit Compensation -->
+                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Start Bit:" VerticalAlignment="Center" Foreground="White" Margin="0,0,8,0"/>
+                            <Slider Grid.Row="8" Grid.Column="1"
+                                    Value="{Binding StartBitCompensation}"
+                                    AutomationProperties.AutomationId="StartBitSlider"
+                                    Minimum="-5.0"
+                                    Maximum="5.0"
+                                    TickFrequency="0.5"
+                                    IsSnapToTickEnabled="True"
+                                    Foreground="{StaticResource TerminalGreen}"
+                                    ToolTip="Timing offset for bit detection. Default -2.0"/>
+                            <TextBlock Grid.Row="8" Grid.Column="2"
+                                       Text="{Binding StartBitCompensation, StringFormat=0.0}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       Foreground="{StaticResource TerminalGreen}"/>
+                        </Grid>
                     </GroupBox>
 
                     <!-- System Log (Middle) -->

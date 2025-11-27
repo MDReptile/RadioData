@@ -19,6 +19,7 @@ namespace RadioDataApp.Services
             public int SelectedInputDeviceIndex { get; set; } = 1;
             public int SelectedOutputDeviceIndex { get; set; } = 1;
             public double InputGain { get; set; } = 1.0;
+            public double OutputGain { get; set; } = 0.5;
             public int ZeroCrossingThreshold { get; set; } = 14;
             public double StartBitCompensation { get; set; } = -2.0;
             public double SquelchThreshold { get; set; } = 0.01;

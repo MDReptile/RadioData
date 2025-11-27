@@ -35,6 +35,7 @@ namespace RadioDataApp.ViewModels
             var settings = _settingsService.LoadSettings();
             _encryptionKey = settings.EncryptionKey;
             _inputGain = settings.InputGain;
+            _outputGain = settings.OutputGain;
             _zeroCrossingThreshold = settings.ZeroCrossingThreshold;
             _startBitCompensation = settings.StartBitCompensation;
             _squelchThreshold = settings.SquelchThreshold;
@@ -52,6 +53,7 @@ namespace RadioDataApp.ViewModels
 
             CustomProtocol.EncryptionKey = _encryptionKey;
             _modem.InputGain = (float)_inputGain;
+            _modem.OutputGain = (float)_outputGain;
             _modem.ZeroCrossingThreshold = _zeroCrossingThreshold;
             _modem.StartBitCompensation = _startBitCompensation;
             _modem.SquelchThreshold = (float)_squelchThreshold;
@@ -59,6 +61,7 @@ namespace RadioDataApp.ViewModels
             Console.WriteLine($"[Settings] Loaded client name: {_clientName}");
             Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
             Console.WriteLine($"[Settings] Loaded input gain: {_inputGain}x");
+            Console.WriteLine($"[Settings] Loaded output gain: {_outputGain}x");
             Console.WriteLine($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
             Console.WriteLine($"[Settings] Loaded start bit compensation: {_startBitCompensation}");
             Console.WriteLine($"[Settings] Loaded squelch threshold: {_squelchThreshold:F3}");
@@ -157,6 +160,7 @@ namespace RadioDataApp.ViewModels
                 SelectedInputDeviceIndex = SelectedInputDeviceIndex,
                 SelectedOutputDeviceIndex = SelectedOutputDeviceIndex,
                 InputGain = InputGain,
+                OutputGain = OutputGain,
                 ZeroCrossingThreshold = ZeroCrossingThreshold,
                 StartBitCompensation = StartBitCompensation,
                 SquelchThreshold = SquelchThreshold,

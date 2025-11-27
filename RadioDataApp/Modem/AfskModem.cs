@@ -31,6 +31,9 @@ namespace RadioDataApp.Modem
         // Input gain for weak signals
         public float InputGain { get; set; } = 1.0f; // Default 1.0 = no amplification, 2.0 = double, etc.
 
+        // Output gain for transmission volume
+        public float OutputGain { get; set; } = 0.5f; // Default 0.5 = 50% volume (was hardcoded 0.5 before)
+
         // Configurable zero-crossing threshold
         public int ZeroCrossingThreshold { get; set; } = 14; // Samples
 
@@ -111,8 +114,8 @@ namespace RadioDataApp.Modem
 
             for (int i = 0; i < sampleCount; i++)
             {
-                // Scale amplitude to 25% for radio VOX triggering
-                short sample = (short)(Math.Sin(_phase) * short.MaxValue * 0.5);
+                // Apply OutputGain instead of hardcoded 0.5
+                short sample = (short)(Math.Sin(_phase) * short.MaxValue * OutputGain);
                 byte[] bytes = BitConverter.GetBytes(sample);
                 buffer.Add(bytes[0]);
                 buffer.Add(bytes[1]);

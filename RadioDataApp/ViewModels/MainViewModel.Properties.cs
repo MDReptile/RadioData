@@ -162,6 +162,16 @@ namespace RadioDataApp.ViewModels
         }
 
         [ObservableProperty]
+        private double _outputGain = 0.5;
+
+        partial void OnOutputGainChanged(double value)
+        {
+            _modem.OutputGain = (float)value;
+            Console.WriteLine($"[Settings] Output gain set to {value}x");
+            SaveCurrentSettings();
+        }
+
+        [ObservableProperty]
         private int _zeroCrossingThreshold = 14;
 
         partial void OnZeroCrossingThresholdChanged(int value)

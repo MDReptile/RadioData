@@ -124,6 +124,7 @@ namespace RadioDataApp.ViewModels
                 MessageToSend = "Hello World";
                 
                 InputGain = 1.0;
+                OutputGain = 0.5;
                 ZeroCrossingThreshold = 14;
                 StartBitCompensation = -2.0;
                 SquelchThreshold = 0.01;
@@ -189,6 +190,7 @@ namespace RadioDataApp.ViewModels
                 MessageToSend = "Hello World";
                 
                 InputGain = 1.0;
+                OutputGain = 0.5;
                 ZeroCrossingThreshold = 14;
                 StartBitCompensation = -2.0;
                 SquelchThreshold = 0.01;
