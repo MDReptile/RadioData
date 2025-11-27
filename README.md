@@ -1,6 +1,6 @@
 # RadioData - AFSK Audio Data Transfer
 
-> AI-assisted development using Visual Studio with Copilot and Claude Sonnet 4.5 as the model and also Google Antigravity, Google Gemini 3, Claude Sonnet 4.5 as models.
+> AI-assisted development using Visual Studio with Copilot using Claude Sonnet 4.5 as the model and also Google Antigravity, Google Gemini 3, Claude Sonnet 4.5 as models.
 
 Transfer text messages and files over audio using AFSK modulation for ham radio, walkie-talkies, or any audio link.
 
@@ -38,7 +38,7 @@ RadioData uses Audio Frequency Shift Keying (AFSK) to encode digital data as aud
 
 - Mark (binary 1): 1200 Hz
 - Space (binary 0): 2200 Hz
-- Baud rate: 250 baud (4ms per bit)
+- Baud rate: 500 baud (2ms per bit)
 - Sample rate: 44.1 kHz
 - Compatible with APRS and packet radio standards
 
@@ -148,7 +148,7 @@ When using Baofeng UV-5R radios:
 
 ### Modulation
 
-- Baud rate: 250 baud
+- Baud rate: 500 baud
 - Mark/Space: 1200Hz / 2200Hz
 - Sample rate: 44.1 kHz
 - Amplitude: 50% maximum
@@ -160,8 +160,8 @@ When using Baofeng UV-5R radios:
 - Maximum packet: 255 bytes
 - File chunks: 200 bytes
 - Text limit: 120 characters
-- Speed: ~250 bits/second
-- Packet time: ~9.5 seconds (first packet ~13.5s)
+- Speed: ~500 bits/second
+- Packet time: ~5 seconds (first packet ~6.2s)
 
 ### Timeouts
 
