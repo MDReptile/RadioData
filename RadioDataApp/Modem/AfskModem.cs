@@ -177,7 +177,7 @@ namespace RadioDataApp.Modem
             // Warn if clipping occurred
             if (clippingDetected)
             {
-                Console.WriteLine("[? CLIPPING] Input gain too high - reduce gain or system volume!");
+                Console.WriteLine("[CLIPPING] Input gain too high - reduce gain or system volume!");
             }
 
             if (newBytes.Count > 0)
