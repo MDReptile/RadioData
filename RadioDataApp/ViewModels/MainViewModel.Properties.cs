@@ -119,7 +119,7 @@ namespace RadioDataApp.ViewModels
                     if (deviceVolume < 0.15f)
                     {
                         System.Windows.MessageBox.Show(
-                            $"?? LOW VOLUME WARNING\n\n" +
+                            $"LOW VOLUME WARNING\n\n" +
                             $"Output Device: {deviceName}\n" +
                             $"Current Volume: {volumePercent}%\n\n" +
                             $"This volume level may be too low to trigger radio VOX.\n\n" +
