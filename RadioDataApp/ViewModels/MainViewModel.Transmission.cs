@@ -245,18 +245,21 @@ namespace RadioDataApp.ViewModels
                     for (int i = 0; i < packets.Count; i++)
                     {
                         bool isFirst = i == 0;
-                        int preambleDuration = isFirst ? 1200 : 20;
+                        bool isLast = i == packets.Count - 1;
+                        int preambleDuration = isFirst ? 1200 : 0;
+                        bool includePostamble = isLast;
                         
-                        var packetAudio = _modem.Modulate(packets[i], true, preambleDuration);
+                        var packetAudio = _modem.Modulate(packets[i], isFirst, preambleDuration, includePostamble);
                         completeAudio.AddRange(packetAudio);
                     }
 
                     byte[] finalAudio = completeAudio.ToArray();
+                    double totalDurationSeconds = finalAudio.Length / 88200.0;
                     
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         StatusMessage = $"Sending: {fileName}";
-                        DebugLog += $"[TX] Generated continuous audio: {finalAudio.Length / 88200.0:F1}s\n";
+                        DebugLog += $"[TX] Generated continuous audio: {totalDurationSeconds:F1}s | {packets.Count} packets back-to-back\n";
                         
                         int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
                         _audioService.StartTransmitting(deviceIndex, finalAudio);

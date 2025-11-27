@@ -57,7 +57,7 @@ namespace RadioDataApp.Modem
             CustomProtocol.ChecksumValidationFailed += (s, e) => ChecksumFailed?.Invoke(this, EventArgs.Empty);
         }
 
-        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1200)
+        public byte[] Modulate(byte[] data, bool includePreamble = true, int preambleDurationMs = 1200, bool includePostamble = true)
         {
             List<byte> samples = [];
             _phase = 0; // Reset phase for new transmission
@@ -86,7 +86,10 @@ namespace RadioDataApp.Modem
             }
 
             // Postamble/Tail - keep VOX open until receiver processes data
-            AddTone(samples, MarkFreq, 800);
+            if (includePostamble)
+            {
+                AddTone(samples, MarkFreq, 800);
+            }
 
             return samples.ToArray();
         }
