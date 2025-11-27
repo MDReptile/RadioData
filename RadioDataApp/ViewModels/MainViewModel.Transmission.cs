@@ -197,7 +197,7 @@ namespace RadioDataApp.ViewModels
             {
                 string timeStr = estimatedSeconds < 60 ? $"{estimatedSeconds:F0} seconds" : $"{estimatedSeconds / 60:F1} minutes";
                 var result = System.Windows.MessageBox.Show(
-                    $"?? WARNING: Long Transfer Time\n\n" +
+                    $"WARNING: Long Transfer Time\n\n" +
                     $"File size: {fileSize / 1024.0:F1} KB\n" +
                     $"Estimated time: {timeStr}\n\n" +
                     $"This application is designed for small files (< 30 seconds).\n" +
