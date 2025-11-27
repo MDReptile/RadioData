@@ -18,6 +18,8 @@ namespace RadioDataApp.ViewModels
         private int _transferIndex;
         private string? _transferTempPath;
         private bool _transferIsCompressed;
+        private DateTime _transferStartTime;
+        private DateTime _lastChunkSentTime;
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
@@ -219,6 +221,8 @@ namespace RadioDataApp.ViewModels
 
             _transferPackets = _fileTransferService.PrepareFileForTransmission(filePath);
             _transferIndex = 0;
+            _transferStartTime = DateTime.Now;
+            _lastChunkSentTime = DateTime.Now;
 
             int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
             _audioService.InitializeTransmission(deviceIndex);
@@ -235,6 +239,7 @@ namespace RadioDataApp.ViewModels
 
                 if (_transferPackets != null && _transferIndex < _transferPackets.Count)
                 {
+                    DateTime now = DateTime.Now;
                     var packet = _transferPackets[_transferIndex];
                     bool preamble = _transferIndex == 0;
                     int preambleDuration = preamble ? 1200 : 0;
@@ -248,6 +253,18 @@ namespace RadioDataApp.ViewModels
                     TransferProgress = prog;
                     TransferStatus = $"Sending {fileName}: Packet {_transferIndex}/{_transferPackets.Count}";
 
+                    if (_transferIndex == 1)
+                    {
+                        DebugLog += $"[TX TIMING] Header sent at {now:HH:mm:ss.fff}\n";
+                    }
+                    else
+                    {
+                        double timeSinceLastChunk = (now - _lastChunkSentTime).TotalSeconds;
+                        double totalElapsed = (now - _transferStartTime).TotalSeconds;
+                        DebugLog += $"[TX TIMING] Chunk {_transferIndex}/{_transferPackets.Count} | Gap: {timeSinceLastChunk:F2}s | Total: {totalElapsed:F2}s | Time: {now:HH:mm:ss.fff}\n";
+                    }
+                    _lastChunkSentTime = now;
+
                     return;
                 }
 
@@ -259,6 +276,7 @@ namespace RadioDataApp.ViewModels
                 _fileTransferTimer.Stop();
                 _audioService.StopTransmission();
 
+                double totalTransferTime = (DateTime.Now - _transferStartTime).TotalSeconds;
                 string timestamp = DateTime.Now.ToString("yyyy/MM/dd 'at' h:mm tt");
                 ChatLog += $">> [{ClientName}] SENT FILE: {fileName} : Sent {timestamp}\n";
 
@@ -269,6 +287,7 @@ namespace RadioDataApp.ViewModels
                 IsTransferring = false;
                 OutputFrequency = 1000;
                 OutputVolume = 0;
+                DebugLog += $"[TX TIMING] Transfer complete in {totalTransferTime:F2}s\n";
                 DebugLog += ">> File send complete\n";
                 DebugLog += "====================\n\n";
 

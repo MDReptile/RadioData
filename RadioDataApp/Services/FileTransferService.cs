@@ -32,6 +32,7 @@ namespace RadioDataApp.Services
         // Timeout tracking
         private DateTime _receptionStartTime;
         private DateTime _lastPacketTime;
+        private DateTime _lastChunkTime;
         private double _maxExpectedTimeSeconds;
 
         public event EventHandler<string>? FileReceived;
@@ -208,10 +209,11 @@ namespace RadioDataApp.Services
                     // Initialize timeout tracking
                     _receptionStartTime = DateTime.Now;
                     _lastPacketTime = DateTime.Now;
+                    _lastChunkTime = DateTime.Now;
                     _maxExpectedTimeSeconds = FirstPacketTimeSeconds + (_expectedChunks * OtherPacketTimeSeconds) + TimeoutBufferSeconds;
                     _timeoutTimer.Start();
 
-                    string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}\nMax time: {_maxExpectedTimeSeconds:F1}s";
+                    string debugMsg = $"File: {_currentFileName}\nSize: {_totalFileSize / 1024.0:F1} KB\nExpected packets: {_expectedChunks}\nMax time: {_maxExpectedTimeSeconds:F1}s\n[RX TIMING] Header received at {DateTime.Now:HH:mm:ss.fff}";
                     DebugMessage?.Invoke(this, debugMsg);
 
                     Console.WriteLine($"[FileTransfer] Starting receive: {_currentFileName} ({_totalFileSize} bytes, {_expectedChunks} chunks, timeout: {_maxExpectedTimeSeconds:F1}s)");
@@ -226,12 +228,15 @@ namespace RadioDataApp.Services
             }
             else if (packet.Type == CustomProtocol.PacketType.FileChunk && _isReceivingFile)
             {
-                _lastPacketTime = DateTime.Now;
+                DateTime now = DateTime.Now;
+                _lastPacketTime = now;
                 
                 if (!_firstChunkReceived)
                 {
+                    double delayAfterHeader = (now - _receptionStartTime).TotalSeconds;
                     _firstChunkReceived = true;
                     Console.WriteLine($"[FileTransfer] First chunk received, switching to {SilenceTimeoutSeconds}s inter-chunk timeout");
+                    DebugMessage?.Invoke(this, $"[RX TIMING] First chunk after {delayAfterHeader:F2}s");
                 }
 
                 try
@@ -247,12 +252,16 @@ namespace RadioDataApp.Services
                     {
                         Array.Copy(data, 0, _fileBuffer, offset, data.Length);
 
-                        if (_receivedChunkIds.Add(seqId)) // Only count if new
+                        if (_receivedChunkIds.Add(seqId))
                         {
+                            double timeSinceLastChunk = (now - _lastChunkTime).TotalSeconds;
+                            double totalElapsed = (now - _receptionStartTime).TotalSeconds;
+                            _lastChunkTime = now;
+                            
                             double progress = (double)_receivedChunkIds.Count / _expectedChunks;
                             ProgressChanged?.Invoke(this, progress);
 
-                            string debugMsg = $"Chunk {seqId + 1}/{_expectedChunks} ({progress:P0})";
+                            string debugMsg = $"Chunk {seqId + 1}/{_expectedChunks} ({progress:P0}) | Gap: {timeSinceLastChunk:F2}s | Total: {totalElapsed:F2}s | Time: {now:HH:mm:ss.fff}";
                             DebugMessage?.Invoke(this, debugMsg);
                             Console.WriteLine($"[FileTransfer] Received chunk {seqId}. Progress: {progress:P0}");
 
@@ -260,6 +269,10 @@ namespace RadioDataApp.Services
                             {
                                 FinishReception();
                             }
+                        }
+                        else
+                        {
+                            DebugMessage?.Invoke(this, $"[RX TIMING] Duplicate chunk {seqId + 1} ignored");
                         }
                     }
                 }
@@ -278,9 +291,12 @@ namespace RadioDataApp.Services
 
         private void FinishReception()
         {
+            double totalTime = (DateTime.Now - _receptionStartTime).TotalSeconds;
             Console.WriteLine($"[FileTransfer] FinishReception called. Chunks received: {_receivedChunkIds.Count}/{_expectedChunks}");
+            DebugMessage?.Invoke(this, $"[RX TIMING] Transfer complete in {totalTime:F2}s");
+            
             _isReceivingFile = false;
-            _timeoutTimer.Stop(); // Stop timeout timer on successful completion
+            _timeoutTimer.Stop();
 
             // Check for dangerous file types before writing to disk
             if (IsDangerousFileType(_currentFileName))
