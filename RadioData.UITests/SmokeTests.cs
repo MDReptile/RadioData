@@ -27,8 +27,8 @@ namespace RadioData.UITests
         [Test]
         public void ComprehensiveUITest_AllTextTransmissions()
         {
-            Process process = null;
-            UIA3Automation automation = null;
+            Process? process = null;
+            UIA3Automation? automation = null;
 
             try
             {
@@ -47,7 +47,7 @@ namespace RadioData.UITests
                 Thread.Sleep(4000);
 
                 automation = new UIA3Automation();
-                Window window = null;
+                Window? window = null;
                 for (int i = 0; i < 10; i++)
                 {
                     var desktop = automation.GetDesktop();
@@ -150,7 +150,7 @@ namespace RadioData.UITests
                     var chat = chatBox.Text ?? "";
                     bool tx = chat.Contains($">> [") && chat.Contains($"] {msg}");
                     bool rx = chat.Contains($"<< [") && chat.Contains($"] {msg}");
-                    
+
                     if (tx && rx)
                     {
                         Console.WriteLine($"[{i + 1}] PASS");
