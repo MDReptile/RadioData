@@ -56,31 +56,31 @@ namespace RadioDataApp.Services
                 // Get the WaveOut device name
                 var waveOutCaps = WaveOut.GetCapabilities(waveOutDeviceIndex);
                 string targetDeviceName = waveOutCaps.ProductName;
-                
-                Console.WriteLine($"[AudioService] Looking for volume of WaveOut device: {targetDeviceName}");
-                
+
+                LogService.Debug($"[AudioService] Looking for volume of WaveOut device: {targetDeviceName}");
+
                 // Find matching MMDevice by name
                 var enumerator = new MMDeviceEnumerator();
                 var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-                
+
                 foreach (var device in devices)
                 {
                     // MMDevice names often contain the same product name
                     if (device.FriendlyName.Contains(targetDeviceName) || targetDeviceName.Contains(device.FriendlyName))
                     {
                         float volume = device.AudioEndpointVolume.MasterVolumeLevelScalar;
-                        Console.WriteLine($"[AudioService] Matched MMDevice: {device.FriendlyName}, Volume: {(int)(volume * 100)}%");
+                        LogService.Debug($"[AudioService] Matched MMDevice: {device.FriendlyName}, Volume: {(int)(volume * 100)}%");
                         return volume;
                     }
                 }
-                
-                Console.WriteLine($"[AudioService] Could not find matching MMDevice for: {targetDeviceName}");
+
+                LogService.Debug($"[AudioService] Could not find matching MMDevice for: {targetDeviceName}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AudioService] Error getting device volume: {ex.Message}");
+                LogService.Error($"[AudioService] Error getting device volume: {ex.Message}");
             }
-            
+
             return 1.0f; // Return 100% if unable to get volume
         }
 
@@ -88,7 +88,7 @@ namespace RadioDataApp.Services
         {
             if (IsInputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Input loopback mode - skipping StartListening");
+                LogService.Debug("[AudioService] Input loopback mode - skipping StartListening");
                 return;
             }
 
@@ -131,30 +131,30 @@ namespace RadioDataApp.Services
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Output loopback mode - InitializeTransmission (no-op)");
+                LogService.Debug("[AudioService] Output loopback mode - InitializeTransmission (no-op)");
                 return;
             }
 
-            Console.WriteLine("[AudioService] ===== INITIALIZING OUTPUT TRANSMISSION =====");
-            Console.WriteLine("[AudioService] Requested device index: " + deviceNumber);
+            LogService.Log("===== INITIALIZING OUTPUT TRANSMISSION =====", "AUDIO");
+            LogService.Debug("[AudioService] Requested device index: " + deviceNumber);
 
             var outputs = GetOutputDevices();
-            Console.WriteLine("[AudioService] Total output devices available: " + outputs.Count);
-            
+            LogService.Debug("[AudioService] Total output devices available: " + outputs.Count);
+
             for (int i = 0; i < outputs.Count; i++)
             {
                 string marker = (i == deviceNumber) ? " <-- SELECTED" : "";
-                Console.WriteLine($"[AudioService]   [{i}] {outputs[i].ProductName}{marker}");
+                LogService.Debug($"[AudioService]   [{i}] {outputs[i].ProductName}{marker}");
             }
 
             if (deviceNumber >= 0 && deviceNumber < outputs.Count)
             {
-                Console.WriteLine("[AudioService] ? Valid device index, opening: " + outputs[deviceNumber].ProductName);
+                LogService.Log("Valid device index, opening: " + outputs[deviceNumber].ProductName, "AUDIO");
             }
             else
             {
-                Console.WriteLine("[AudioService] ? ERROR: Device index " + deviceNumber + " out of range (0-" + (outputs.Count - 1) + ")");
-                Console.WriteLine("[AudioService] ? Audio will likely play on Windows default device!");
+                LogService.Error("ERROR: Device index " + deviceNumber + " out of range (0-" + (outputs.Count - 1) + ")");
+                LogService.Error("Audio will likely play on Windows default device!");
             }
 
             StopTransmission();
@@ -172,15 +172,15 @@ namespace RadioDataApp.Services
 
             _waveOut.Init(_bufferedWaveProvider);
             _waveOut.Play();
-            Console.WriteLine("[AudioService] ? Playback started on device index " + deviceNumber);
-            Console.WriteLine("[AudioService] ==========================================");
+            LogService.Log("Playback started on device index " + deviceNumber, "AUDIO");
+            LogService.Log("==========================================", "AUDIO");
         }
 
         public void QueueAudio(byte[] audioData)
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Output loopback mode - buffering " + audioData.Length + " bytes for simulated playback");
+                LogService.Debug("[AudioService] Output loopback mode - buffering " + audioData.Length + " bytes for simulated playback");
                 return;
             }
 
@@ -216,7 +216,7 @@ namespace RadioDataApp.Services
 
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Output loopback mode - StopTransmission");
+                LogService.Debug("[AudioService] Output loopback mode - StopTransmission");
                 _loopbackAudioData = null;
                 _loopbackOffset = 0;
                 var handler = TransmissionCompleted;
@@ -246,7 +246,7 @@ namespace RadioDataApp.Services
         {
             if (IsOutputLoopbackMode)
             {
-                Console.WriteLine("[AudioService] Output loopback mode - starting simulated transmission of " + audioData.Length + " bytes");
+                LogService.Debug("[AudioService] Output loopback mode - starting simulated transmission of " + audioData.Length + " bytes");
                 _loopbackAudioData = audioData;
                 _loopbackOffset = 0;
 
@@ -258,7 +258,7 @@ namespace RadioDataApp.Services
                     {
                         _loopbackTimer.Stop();
                         _loopbackTimer = null;
-                        Console.WriteLine("[AudioService] Loopback transmission complete");
+                        LogService.Debug("[AudioService] Loopback transmission complete");
                         var txHandler = TransmissionCompleted;
                         if (txHandler != null)
                         {

@@ -43,6 +43,9 @@ namespace RadioDataApp.Modem
         // Configurable squelch threshold (0.0 to 1.0, default 0.01 = 1% of max signal)
         public float SquelchThreshold { get; set; } = DefaultSquelchThreshold;
 
+        // Buffer limit to prevent memory leaks
+        private const int MaxBufferSize = 1024 * 10; // 10KB
+
         // Event for raw byte debugging
         public event EventHandler<byte>? RawByteReceived;
 
@@ -180,16 +183,25 @@ namespace RadioDataApp.Modem
             // Warn if clipping occurred
             if (clippingDetected)
             {
-                Console.WriteLine("[CLIPPING] Input gain too high - reduce gain or system volume!");
+                Services.LogService.Error("[CLIPPING] Input gain too high - reduce gain or system volume!");
             }
 
             if (newBytes.Count > 0)
             {
                 _byteBuffer.AddRange(newBytes);
-                
+
+                // Prevent infinite buffer growth
+                if (_byteBuffer.Count > MaxBufferSize)
+                {
+                    // Remove oldest 25% of buffer
+                    int removeCount = MaxBufferSize / 4;
+                    _byteBuffer.RemoveRange(0, removeCount);
+                    Services.LogService.Debug($"[AfskModem] Buffer overflow protection: Removed {removeCount} bytes. Current size: {_byteBuffer.Count}");
+                }
+
                 // Try to decode a packet from the buffer
                 CustomProtocol.DecodedPacket? packet = CustomProtocol.DecodeAndConsume(_byteBuffer);
-                
+
                 if (packet != null)
                 {
                     return packet;

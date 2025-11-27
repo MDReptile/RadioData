@@ -50,11 +50,11 @@ namespace RadioDataApp.Modem
             {
                 byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
                 byte[] hash = sha256.ComputeHash(passwordBytes);
-                
+
                 // Cache the result
                 _cachedKeyString = password;
                 _cachedDerivedKey = hash;
-                
+
                 return hash;
             }
         }
@@ -112,7 +112,7 @@ namespace RadioDataApp.Modem
             // Format for text messages with sender name:
             // [SenderNameLength(1 byte)][SenderName(variable)][Message(rest)]
             List<byte> payload = [];
-            
+
             if (!string.IsNullOrEmpty(senderName))
             {
                 byte[] nameBytes = Encoding.ASCII.GetBytes(senderName);
@@ -123,9 +123,9 @@ namespace RadioDataApp.Modem
             {
                 payload.Add(0); // No sender name
             }
-            
+
             payload.AddRange(Encoding.ASCII.GetBytes(text));
-            
+
             return Encode(payload.ToArray(), PacketType.Text);
         }
 
@@ -185,7 +185,7 @@ namespace RadioDataApp.Modem
 
             if (calculatedChecksum != receivedChecksum)
             {
-                Console.WriteLine("[DEBUG] Checksum Mismatch!");
+                Services.LogService.Debug("[DEBUG] Checksum Mismatch!");
                 // Signal that checksum validation actually failed
                 ChecksumValidationFailed?.Invoke(null, EventArgs.Empty);
                 // Corrupt packet, remove the Sync Word and try again next time

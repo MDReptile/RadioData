@@ -1,6 +1,6 @@
 # RadioData - AFSK Audio Data Transfer
 
-> AI-assisted development using Visual Studio with GitHub Copilot, Google Gemini 3, and Claude Sonnet 4.5
+> AI-assisted development using Visual Studio with GitHub Copilot, Google Gemini 3, Claude Sonnet 4.5, and Google Antigravity
 
 Transfer text messages and files over audio using AFSK modulation for ham radio, walkie-talkies, or any audio link.
 

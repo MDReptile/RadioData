@@ -24,7 +24,7 @@ namespace RadioDataApp.ViewModels
         public MainViewModel()
         {
             Instance = this;
-            
+
             _audioService = new AudioService();
             _modem = new AfskModem();
             _fileTransferService = new FileTransferService();
@@ -58,20 +58,20 @@ namespace RadioDataApp.ViewModels
             _modem.StartBitCompensation = _startBitCompensation;
             _modem.SquelchThreshold = (float)_squelchThreshold;
 
-            Console.WriteLine($"[Settings] Loaded client name: {_clientName}");
-            Console.WriteLine($"[Settings] Loaded encryption key: {_encryptionKey}");
-            Console.WriteLine($"[Settings] Loaded input gain: {_inputGain}x");
-            Console.WriteLine($"[Settings] Loaded output gain: {_outputGain}x");
-            Console.WriteLine($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
-            Console.WriteLine($"[Settings] Loaded start bit compensation: {_startBitCompensation}");
-            Console.WriteLine($"[Settings] Loaded squelch threshold: {_squelchThreshold:F3}");
-            Console.WriteLine($"[Settings] Loaded compress images: {_compressImages}");
+            LogService.Debug($"[Settings] Loaded client name: {_clientName}");
+            LogService.Debug($"[Settings] Loaded encryption key: {_encryptionKey}");
+            LogService.Debug($"[Settings] Loaded input gain: {_inputGain}x");
+            LogService.Debug($"[Settings] Loaded output gain: {_outputGain}x");
+            LogService.Debug($"[Settings] Loaded zero-crossing threshold: {_zeroCrossingThreshold}");
+            LogService.Debug($"[Settings] Loaded start bit compensation: {_startBitCompensation}");
+            LogService.Debug($"[Settings] Loaded squelch threshold: {_squelchThreshold:F3}");
+            LogService.Debug($"[Settings] Loaded compress images: {_compressImages}");
 
             // Load chat history (must be after encryption key is loaded)
             _chatLog = _settingsService.LoadChatHistory(_encryptionKey);
             if (!string.IsNullOrEmpty(_chatLog))
             {
-                Console.WriteLine($"[ChatHistory] Restored previous chat history");
+                LogService.Debug($"[ChatHistory] Restored previous chat history");
             }
 
             // Wire up service events
@@ -91,7 +91,15 @@ namespace RadioDataApp.ViewModels
             // Hook up AudioService events
             _audioService.AudioDataReceived += OnAudioDataReceived;
 
-
+            // Hook up LogService
+            LogService.OnLog += (s, e) =>
+            {
+                // Ensure UI update is on the UI thread
+                System.Windows.Application.Current?.Dispatcher.InvokeAsync(() =>
+                {
+                    AddLogEntry(e.Message, e.Category);
+                });
+            };
 
             LoadDevices();
 
@@ -109,23 +117,23 @@ namespace RadioDataApp.ViewModels
             OnSelectedInputDeviceIndexChanged(_selectedInputDeviceIndex);
             OnSelectedOutputDeviceIndexChanged(_selectedOutputDeviceIndex);
 
-            Console.WriteLine($"[Settings] Loaded input device index: {_selectedInputDeviceIndex}");
-            Console.WriteLine($"[Settings] Loaded output device index: {_selectedOutputDeviceIndex}");
+            LogService.Debug($"[Settings] Loaded input device index: {_selectedInputDeviceIndex}");
+            LogService.Debug($"[Settings] Loaded output device index: {_selectedOutputDeviceIndex}");
         }
 
         private string GenerateUniqueClientName()
         {
             long ticks = DateTime.UtcNow.Ticks;
             Random random = new Random((int)(ticks & 0xFFFFFFFF));
-            
+
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             char[] name = new char[10];
-            
+
             for (int i = 0; i < 10; i++)
             {
                 name[i] = chars[random.Next(chars.Length)];
             }
-            
+
             return new string(name);
         }
 
