@@ -233,6 +233,7 @@
                                  Foreground="{StaticResource TerminalGreen}"
                                  CaretBrush="{StaticResource TerminalGreen}"
                                  materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                 materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"
                                  BorderBrush="{StaticResource TerminalGreen}"
                                  FontSize="12"
                                  Padding="8,6"
