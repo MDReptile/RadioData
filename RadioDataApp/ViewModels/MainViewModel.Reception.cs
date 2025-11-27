@@ -36,7 +36,7 @@ namespace RadioDataApp.ViewModels
 
                 if (InputVolume > 0.05 && freq >= 500 && freq <= 3000)
                     InputFrequency = freq;
-                else if (InputVolume == 0)
+                else if (InputVolume < 0.01)
                     InputFrequency = 0;
 
                 float normalizedRms = (float)(rms / 32768.0);
