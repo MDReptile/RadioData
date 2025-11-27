@@ -151,7 +151,7 @@ namespace RadioDataApp.ViewModels
         private void ResetEverything()
         {
             var result = MessageBox.Show(
-                "RESET EVERYTHING TO FACTORY DEFAULTS?\n\nThis will:\n? Clear all chat history\n? Clear system log\n? Delete all received files\n? Reset encryption key\n? Generate new client name\n? Reset all tuning parameters\n? Reset device selections\n\nTHIS CANNOT BE UNDONE!\n\nAre you absolutely sure?",
+                "RESET EVERYTHING TO FACTORY DEFAULTS?\n\nThis will:\n• Clear all chat history\n• Clear system log\n• Delete all received files\n• Reset encryption key\n• Generate new client name\n• Reset all tuning parameters\n• Reset device selections\n\nTHIS CANNOT BE UNDONE!\n\nAre you absolutely sure?",
                 "Reset Everything - Final Warning",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Stop,

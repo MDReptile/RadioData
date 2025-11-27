@@ -249,6 +249,40 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
+                    
+                    <Grid DockPanel.Dock="Right"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Width="250"
+                          Margin="0,0,8,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBox Grid.Column="0"
+                                 x:Name="ClientNameBox"
+                                 Text="{Binding ClientName, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="10"
+                                 Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                                 Foreground="{StaticResource TerminalGreen}"
+                                 CaretBrush="{StaticResource TerminalGreen}"
+                                 materialDesign:TextFieldAssist.UnderlineBrush="{StaticResource TerminalGreen}"
+                                 materialDesign:TextFieldAssist.CharacterCounterVisibility="Collapsed"
+                                 BorderBrush="{StaticResource TerminalGreen}"
+                                 FontSize="12"
+                                 Padding="8,6"
+                                 Margin="0,0,8,0"
+                                 KeyDown="ClientNameBox_KeyDown"
+                                 ToolTip="Your identifier shown in chat messages (max 10 chars). Auto-generated on first launch."/>
+                        
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="{StaticResource TerminalGreen}"
+                                   Opacity="0.7"
+                                   Text="{Binding ClientName.Length, StringFormat={}{0}/10, FallbackValue=0/10}"/>
+                    </Grid>
                 </DockPanel>
             </Border>
 
