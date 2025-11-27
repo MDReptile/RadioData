@@ -14,7 +14,8 @@ namespace RadioDataApp.Services
         private const double FirstPacketTimeSeconds = 13.5;
         private const double OtherPacketTimeSeconds = 9.5;
         private const double TimeoutBufferSeconds = 15.0;
-        private const double SilenceTimeoutSeconds = 2.0; // Timeout if no packets for 2s (dead air detection)
+        private const double SilenceTimeoutSeconds = 5.0; // Timeout if no packets for 5s (dead air detection)
+        private const double InitialChunkTimeoutSeconds = 15.0;
 
         private readonly ImageCompressionService _imageCompressionService = new();
         private readonly System.Timers.Timer _timeoutTimer;
@@ -26,6 +27,7 @@ namespace RadioDataApp.Services
         private byte[] _fileBuffer = []; // Fixed size buffer
         private HashSet<int> _receivedChunkIds = []; // Track unique chunks
         private int _expectedChunks;
+        private bool _firstChunkReceived;
 
         // Timeout tracking
         private DateTime _receptionStartTime;
@@ -94,14 +96,15 @@ namespace RadioDataApp.Services
             double elapsedTotal = (now - _receptionStartTime).TotalSeconds;
             double elapsedSinceLastPacket = (now - _lastPacketTime).TotalSeconds;
 
-            // Check 1: Silence detection (dead air - no packets for 2 seconds)
-            if (elapsedSinceLastPacket > SilenceTimeoutSeconds)
+            double timeoutThreshold = _firstChunkReceived ? SilenceTimeoutSeconds : InitialChunkTimeoutSeconds;
+
+            if (elapsedSinceLastPacket > timeoutThreshold)
             {
-                HandleTimeout($"Timeout: No signal for {elapsedSinceLastPacket:F1}s (dead air - transmission stopped)");
+                string phase = _firstChunkReceived ? "between chunks" : "waiting for first chunk";
+                HandleTimeout($"Timeout: No signal for {elapsedSinceLastPacket:F1}s ({phase} - transmission stopped)");
                 return;
             }
 
-            // Check 2: Max expected time exceeded (backup safety)
             if (elapsedTotal > _maxExpectedTimeSeconds)
             {
                 HandleTimeout($"Timeout: Expected completion in {_maxExpectedTimeSeconds:F1}s, but elapsed {elapsedTotal:F1}s");
@@ -191,13 +194,12 @@ namespace RadioDataApp.Services
                     _fileBuffer = new byte[_totalFileSize];
                     _receivedChunkIds.Clear();
                     _isReceivingFile = true;
+                    _firstChunkReceived = false;
                     _expectedChunks = (int)Math.Ceiling((double)_totalFileSize / MaxChunkSize);
 
                     // Initialize timeout tracking
                     _receptionStartTime = DateTime.Now;
                     _lastPacketTime = DateTime.Now;
-                    // Total time = first packet (header with preamble) + all data chunks + buffer
-                    // Header takes FirstPacketTimeSeconds, then _expectedChunks data packets each take OtherPacketTimeSeconds
                     _maxExpectedTimeSeconds = FirstPacketTimeSeconds + (_expectedChunks * OtherPacketTimeSeconds) + TimeoutBufferSeconds;
                     _timeoutTimer.Start();
 
@@ -216,8 +218,13 @@ namespace RadioDataApp.Services
             }
             else if (packet.Type == CustomProtocol.PacketType.FileChunk && _isReceivingFile)
             {
-                // Update last packet time for silence detection
                 _lastPacketTime = DateTime.Now;
+                
+                if (!_firstChunkReceived)
+                {
+                    _firstChunkReceived = true;
+                    Console.WriteLine($"[FileTransfer] First chunk received, switching to {SilenceTimeoutSeconds}s inter-chunk timeout");
+                }
 
                 try
                 {
