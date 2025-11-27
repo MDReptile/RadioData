@@ -151,6 +151,11 @@ namespace RadioDataApp.ViewModels
         [ObservableProperty]
         private string _messageToSend = "Hello World";
 
+        partial void OnMessageToSendChanged(string value)
+        {
+            StartTransmissionCommand.NotifyCanExecuteChanged();
+        }
+
         [ObservableProperty]
         private double _inputGain = 1.0;
 

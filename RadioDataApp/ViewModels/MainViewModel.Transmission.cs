@@ -18,7 +18,7 @@ namespace RadioDataApp.ViewModels
         private bool _transferIsCompressed;
         private DateTime _transferStartTime;
 
-        private bool CanTransmit => !IsTransmitting && !IsReceiving;
+        private bool CanTransmit => !IsTransmitting && !IsReceiving && !string.IsNullOrWhiteSpace(MessageToSend);
 
         [RelayCommand(CanExecute = nameof(CanTransmit))]
         private void StartTransmission()

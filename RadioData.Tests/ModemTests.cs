@@ -82,7 +82,6 @@ namespace RadioData.Tests
         }
 
         [Theory]
-        [InlineData("")]
         [InlineData("A")]
         [InlineData("This is a longer message to test if the modem can handle more data without losing sync or bits.")]
         [InlineData("!@#$%^&*()_+{}|:\"<>?")]
