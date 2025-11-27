@@ -14,7 +14,7 @@ namespace RadioDataApp.Services
         private const double FirstPacketTimeSeconds = 13.5;
         private const double OtherPacketTimeSeconds = 9.5;
         private const double TimeoutBufferSeconds = 15.0;
-        private const double SilenceTimeoutSeconds = 20.0; // Timeout if no packets for 20s (must be > 9.5s per packet + margin)
+        private const double SilenceTimeoutSeconds = 2.0; // Timeout if no packets for 2s (dead air detection)
 
         private readonly ImageCompressionService _imageCompressionService = new();
         private readonly System.Timers.Timer _timeoutTimer;
@@ -76,8 +76,8 @@ namespace RadioDataApp.Services
 
         public FileTransferService()
         {
-            // Initialize timeout timer (check every 2 seconds)
-            _timeoutTimer = new System.Timers.Timer(2000);
+            // Initialize timeout timer (check every 500ms for faster dead air detection)
+            _timeoutTimer = new System.Timers.Timer(500);
             _timeoutTimer.Elapsed += OnTimeoutCheck;
             _timeoutTimer.AutoReset = true;
         }
@@ -94,17 +94,17 @@ namespace RadioDataApp.Services
             double elapsedTotal = (now - _receptionStartTime).TotalSeconds;
             double elapsedSinceLastPacket = (now - _lastPacketTime).TotalSeconds;
 
-            // Check 1: Max expected time exceeded
-            if (elapsedTotal > _maxExpectedTimeSeconds)
+            // Check 1: Silence detection (dead air - no packets for 2 seconds)
+            if (elapsedSinceLastPacket > SilenceTimeoutSeconds)
             {
-                HandleTimeout($"Timeout: Expected completion in {_maxExpectedTimeSeconds:F1}s, but elapsed {elapsedTotal:F1}s");
+                HandleTimeout($"Timeout: No signal for {elapsedSinceLastPacket:F1}s (dead air - transmission stopped)");
                 return;
             }
 
-            // Check 2: Silence detection (no packets for 10 seconds)
-            if (elapsedSinceLastPacket > SilenceTimeoutSeconds)
+            // Check 2: Max expected time exceeded (backup safety)
+            if (elapsedTotal > _maxExpectedTimeSeconds)
             {
-                HandleTimeout($"Timeout: No packets received for {elapsedSinceLastPacket:F1}s (signal lost)");
+                HandleTimeout($"Timeout: Expected completion in {_maxExpectedTimeSeconds:F1}s, but elapsed {elapsedTotal:F1}s");
                 return;
             }
         }
@@ -161,6 +161,25 @@ namespace RadioDataApp.Services
         {
             if (packet.Type == CustomProtocol.PacketType.FileHeader)
             {
+                // Check if we're already receiving a file - if so, the previous transmission failed
+                if (_isReceivingFile)
+                {
+                    string oldFileName = _currentFileName;
+                    int oldReceived = _receivedChunkIds.Count;
+                    int oldExpected = _expectedChunks;
+                    
+                    Console.WriteLine($"[FileTransfer] WARNING: New FileHeader received while already receiving '{oldFileName}'");
+                    Console.WriteLine($"[FileTransfer] Previous transmission incomplete: {oldReceived}/{oldExpected} chunks");
+                    
+                    string warningMsg = $"[TRANSFER FAILED] Previous file '{oldFileName}' incomplete ({oldReceived}/{oldExpected} chunks)\n" +
+                                       $"Starting new transmission...";
+                    DebugMessage?.Invoke(this, warningMsg);
+                    
+                    // Clean up old transfer
+                    _timeoutTimer.Stop();
+                    _isReceivingFile = false;
+                }
+                
                 try
                 {
                     // Parse Header
@@ -233,6 +252,12 @@ namespace RadioDataApp.Services
                 {
                     Console.WriteLine($"[FileTransfer] Error parsing chunk: {ex.Message}");
                 }
+            }
+            else if (packet.Type == CustomProtocol.PacketType.FileChunk && !_isReceivingFile)
+            {
+                // Received a chunk without a header - log warning
+                Console.WriteLine($"[FileTransfer] WARNING: Received FileChunk without active transfer (orphaned chunk)");
+                DebugMessage?.Invoke(this, "[WARNING] Received file chunk without header - ignoring");
             }
         }
 
