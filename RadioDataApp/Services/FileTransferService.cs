@@ -14,7 +14,7 @@ namespace RadioDataApp.Services
         private const double FirstPacketTimeSeconds = 13.5;
         private const double OtherPacketTimeSeconds = 9.5;
         private const double TimeoutBufferSeconds = 15.0;
-        private const double SilenceTimeoutSeconds = 5.0; // Timeout if no packets for 5s (dead air detection)
+        private const double SilenceTimeoutSeconds = 12.0; // Timeout if no packets for 5s (dead air detection)
         private const double InitialChunkTimeoutSeconds = 15.0;
 
         private readonly ImageCompressionService _imageCompressionService = new();
