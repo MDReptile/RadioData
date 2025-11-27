@@ -5,6 +5,7 @@ using RadioDataApp.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Windows;
 using System.Windows.Threading;
 
 namespace RadioDataApp.ViewModels
@@ -13,13 +14,9 @@ namespace RadioDataApp.ViewModels
     {
         private DispatcherTimer? _transmissionMonitorTimer;
         private DispatcherTimer? _visualizationTimer;
-        private DispatcherTimer? _fileTransferTimer;
-        private List<byte[]>? _transferPackets;
-        private int _transferIndex;
         private string? _transferTempPath;
         private bool _transferIsCompressed;
         private DateTime _transferStartTime;
-        private DateTime _lastChunkSentTime;
 
         private bool CanTransmit => !IsTransmitting && !IsReceiving;
 
@@ -271,7 +268,6 @@ namespace RadioDataApp.ViewModels
                         _transmissionMonitorTimer.Interval = TimeSpan.FromMilliseconds(100);
                         
                         bool hasStartedPlaying = false;
-                        int packetIndex = 0;
                         
                         _transmissionMonitorTimer.Tick += (s, e) =>
                         {
