@@ -248,8 +248,9 @@ namespace RadioDataApp.ViewModels
                         bool isLast = i == packets.Count - 1;
                         int preambleDuration = isFirst ? 1200 : 0;
                         bool includePostamble = isLast;
+                        bool resetPhase = isFirst;
                         
-                        var packetAudio = _modem.Modulate(packets[i], isFirst, preambleDuration, includePostamble);
+                        var packetAudio = _modem.Modulate(packets[i], isFirst, preambleDuration, includePostamble, resetPhase);
                         completeAudio.AddRange(packetAudio);
                     }
 
@@ -259,7 +260,7 @@ namespace RadioDataApp.ViewModels
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         StatusMessage = $"Sending: {fileName}";
-                        DebugLog += $"[TX] Generated continuous audio: {totalDurationSeconds:F1}s | {packets.Count} packets back-to-back\n";
+                        DebugLog += $"[TX] Generated continuous audio: {totalDurationSeconds:F1}s | {packets.Count} packets with phase continuity\n";
                         
                         int deviceIndex = _audioService.IsOutputLoopbackMode ? 0 : SelectedOutputDeviceIndex - 1;
                         _audioService.StartTransmitting(deviceIndex, finalAudio);
