@@ -241,8 +241,8 @@ namespace RadioDataApp.ViewModels
                 {
                     DateTime now = DateTime.Now;
                     var packet = _transferPackets[_transferIndex];
-                    bool preamble = _transferIndex == 0;
-                    int preambleDuration = preamble ? 1200 : 0;
+                    bool preamble = true;
+                    int preambleDuration = _transferIndex == 0 ? 1200 : 300;
 
                     var audio = _modem.Modulate(packet, preamble, preambleDuration);
                     _audioService.QueueAudio(audio);
