@@ -119,6 +119,18 @@ Recommendations:
 - Start with 50% radio volume, adjust Input Gain
 - Monitor RMS levels (target 0.01 to 0.5, avoid 1.0)
 
+#### Baofeng UV-5R Specific Settings
+
+When using Baofeng UV-5R radios:
+
+- **VOX Setting**: Set VOX level to 1 (lowest sensitivity works best)
+- **Time-Out Timer (TOT)**: Default is 60 seconds. For files requiring longer transmission:
+  - Access menu item 34 (TOT)
+  - Set to 180 seconds (3 minutes) or higher
+  - Files over 60 seconds will fail with default TOT setting
+- **Volume**: Set radio volume to 50-75%
+- **Windows Output**: Keep Windows output volume at 50-75%
+
 ### Common Issues
 
 | Issue | Solution |
@@ -129,6 +141,8 @@ Recommendations:
 | Random noise decoding | Increase Squelch Threshold |
 | Clipping warnings | Reduce Input Gain |
 | VOX not triggering | Increase radio or output volume |
+| Transfer stops at 60s | Increase TOT setting (Menu 34 on UV-5R) |
+| Red TX light flickers | Increase output volume or VOX level |
 
 ## Technical Details
 
@@ -137,8 +151,9 @@ Recommendations:
 - Baud rate: 250 baud
 - Mark/Space: 1200Hz / 2200Hz
 - Sample rate: 44.1 kHz
-- Amplitude: 25% maximum
-- Preamble: 1200ms alternating tones
+- Amplitude: 50% maximum
+- Preamble: 1200ms for first packet
+- Phase continuity: Maintained across all packets in file transfer
 
 ### Protocol
 
