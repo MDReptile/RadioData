@@ -283,6 +283,7 @@ namespace RadioDataApp.ViewModels
             _fileTransferService.DebugMessage += OnFileTransferDebugMessage;
             _fileTransferService.FileReceived += OnFileReceived;
             _fileTransferService.TimeoutOccurred += OnFileTransferTimeout;
+            _fileTransferService.FileOverwritePrompt += OnFileOverwritePrompt;
 
             // Hook up RMS level logging for signal diagnostics
             _modem.RmsLevelDetected += OnRmsLevelDetected;
@@ -385,6 +386,30 @@ namespace RadioDataApp.ViewModels
                 IsReceiving = false;
                 IsTransferring = false;
                 DebugLog += "[TIMEOUT] " + message + "\n";
+            });
+        }
+
+        private void OnFileOverwritePrompt(object? sender, FileTransferService.FileOverwriteEventArgs e)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                string fileName = Path.GetFileName(e.FilePath);
+                var result = MessageBox.Show(
+                    $"The file '{fileName}' already exists.\n\nDo you want to overwrite it?\n\nYes = Overwrite existing file\nNo = Create new numbered file",
+                    "File Already Exists",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                e.Overwrite = (result == MessageBoxResult.Yes);
+
+                if (e.Overwrite)
+                {
+                    DebugLog += $"[FILE] Overwriting existing file: {fileName}\n";
+                }
+                else
+                {
+                    DebugLog += $"[FILE] Creating new numbered file for: {fileName}\n";
+                }
             });
         }
 

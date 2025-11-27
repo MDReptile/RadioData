@@ -24,17 +24,31 @@ namespace RadioDataApp
         {
             InitializeComponent();
 
-            // Run loopback tests on startup (DEBUG only)
-#if DEBUG
-            Tests.LoopbackTest.RunTests();
-#endif
+            Loaded += (s, e) => CenterWindowOnPrimaryScreen();
 
             // Subscribe to ViewModel's PropertyChanged event for auto-scroll
-            // Must be done after InitializeComponent when DataContext is set
             if (DataContext is MainViewModel viewModel)
             {
                 viewModel.PropertyChanged += ViewModel_PropertyChanged;
             }
+        }
+
+        private void CenterWindowOnPrimaryScreen()
+        {
+            var workArea = SystemParameters.WorkArea;
+            
+            this.Left = workArea.Left + (workArea.Width - this.ActualWidth) / 2;
+            this.Top = workArea.Top + (workArea.Height - this.ActualHeight) / 2;
+
+            if (this.Left < workArea.Left)
+                this.Left = workArea.Left;
+            if (this.Top < workArea.Top)
+                this.Top = workArea.Top;
+
+            if (this.Left + this.ActualWidth > workArea.Right)
+                this.Left = workArea.Right - this.ActualWidth;
+            if (this.Top + this.ActualHeight > workArea.Bottom)
+                this.Top = workArea.Bottom - this.ActualHeight;
         }
 
         private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

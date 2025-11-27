@@ -36,12 +36,19 @@ namespace RadioDataApp.Services
         public event EventHandler<double>? ProgressChanged;
         public event EventHandler<string>? DebugMessage;
         public event EventHandler<string>? TimeoutOccurred;
+        public event EventHandler<FileOverwriteEventArgs>? FileOverwritePrompt;
 
         // Public state for debugging
         public int ReceivedChunks => _receivedChunkIds.Count;
         public int ExpectedChunks => _expectedChunks;
         public string CurrentFileName => _currentFileName;
         public bool IsReceivingFile => _isReceivingFile;
+
+        public class FileOverwriteEventArgs : EventArgs
+        {
+            public string FilePath { get; set; } = "";
+            public bool Overwrite { get; set; }
+        }
 
         public FileTransferService()
         {
@@ -221,15 +228,22 @@ namespace RadioDataApp.Services
             string savePath = Path.Combine(receiveDir, _currentFileName);
             Console.WriteLine($"[FileTransfer] Initial save path: {savePath}");
 
-            // Ensure unique name
-            int counter = 1;
-            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(_currentFileName);
-            string ext = Path.GetExtension(_currentFileName);
-
-            while (File.Exists(savePath))
+            if (File.Exists(savePath))
             {
-                savePath = Path.Combine(receiveDir, $"{fileNameWithoutExt}_{counter++}{ext}");
+                var args = new FileOverwriteEventArgs { FilePath = savePath, Overwrite = false };
+                FileOverwritePrompt?.Invoke(this, args);
+
+                if (!args.Overwrite)
+                {
+                    savePath = GetUniqueFilePath(receiveDir, _currentFileName);
+                    Console.WriteLine($"[FileTransfer] Creating new file: {savePath}");
+                }
+                else
+                {
+                    Console.WriteLine($"[FileTransfer] Overwriting existing file: {savePath}");
+                }
             }
+
             Console.WriteLine($"[FileTransfer] Final save path: {savePath}");
 
             try
@@ -252,12 +266,15 @@ namespace RadioDataApp.Services
                 {
                     string decompressedPath = Path.ChangeExtension(savePath, ".png");
 
-                    // Ensure unique name for decompressed file
-                    counter = 1;
-                    fileNameWithoutExt = Path.GetFileNameWithoutExtension(decompressedPath);
-                    while (File.Exists(decompressedPath))
+                    if (File.Exists(decompressedPath))
                     {
-                        decompressedPath = Path.Combine(receiveDir, $"{fileNameWithoutExt}_{counter++}.png");
+                        var args = new FileOverwriteEventArgs { FilePath = decompressedPath, Overwrite = false };
+                        FileOverwritePrompt?.Invoke(this, args);
+
+                        if (!args.Overwrite)
+                        {
+                            decompressedPath = GetUniqueFilePath(receiveDir, Path.GetFileName(decompressedPath));
+                        }
                     }
 
                     _imageCompressionService.DecompressImage(_fileBuffer, decompressedPath);
@@ -265,14 +282,13 @@ namespace RadioDataApp.Services
                     Console.WriteLine($"[FileTransfer] Decompressed to {decompressedPath}");
                     FileReceived?.Invoke(this, decompressedPath);
 
-                    // Optional: Delete the compressed file
                     File.Delete(savePath);
                     Console.WriteLine($"[FileTransfer] Deleted temporary .cimg file");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[FileTransfer] Decompression failed: {ex.Message}");
-                    FileReceived?.Invoke(this, savePath); // Return original if failed
+                    FileReceived?.Invoke(this, savePath);
                 }
             }
             else
@@ -283,6 +299,21 @@ namespace RadioDataApp.Services
 
             ProgressChanged?.Invoke(this, 1.0);
             Console.WriteLine($"[FileTransfer] FinishReception completed successfully");
+        }
+
+        private string GetUniqueFilePath(string directory, string fileName)
+        {
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+            string ext = Path.GetExtension(fileName);
+            int counter = 1;
+            string newPath = Path.Combine(directory, fileName);
+
+            while (File.Exists(newPath))
+            {
+                newPath = Path.Combine(directory, $"{fileNameWithoutExt}_{counter++}{ext}");
+            }
+
+            return newPath;
         }
     }
 }
