@@ -39,6 +39,12 @@ namespace RadioDataApp.ViewModels
                 else if (InputVolume < 0.01)
                     InputFrequency = 0;
 
+                // Don't process packets while transmitting to avoid receiving own transmission
+                if (IsTransmitting)
+                {
+                    return;
+                }
+
                 float normalizedRms = (float)(rms / 32768.0);
                 if (normalizedRms >= _modem.SquelchThreshold)
                 {
